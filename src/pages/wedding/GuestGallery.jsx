@@ -6,14 +6,18 @@ import { useCountdown } from '../../hooks/useCountdown.js';
 import { useEventInteractions } from '../../hooks/useEventInteractions.js';
 import { useGuestbook } from '../../hooks/useGuestbook.js';
 import { supabase, supabaseReady } from '../../lib/supabase.js';
-import Hero from '../../components/wedding/Hero.jsx';
-import CountdownBanner from '../../components/ui/CountdownBanner.jsx';
 import FeedGrid from '../../components/wedding/Feed.jsx';
-import Guestbook from '../../components/wedding/Guestbook.jsx';
 import UploadModal from '../../components/wedding/UploadModal.jsx';
 import Modal from '../../components/ui/Modal.jsx';
 import Spinner from '../../components/ui/Spinner.jsx';
+import EmptyState from '../../components/ui/EmptyState.jsx';
 import InstallApp from '../../components/ui/InstallApp.jsx';
+import BottomNav, { TABS } from '../../components/feed/BottomNav.jsx';
+import PhotoFeed from '../../components/feed/PhotoFeed.jsx';
+import ReelFeed from '../../components/feed/ReelFeed.jsx';
+import NotesFeed from '../../components/feed/NotesFeed.jsx';
+import Avatar from '../../components/feed/Avatar.jsx';
+import { PlusIcon } from '../../components/feed/icons.jsx';
 
 async function downloadUrl(url, filename) {
   try {
@@ -43,6 +47,7 @@ export default function GuestGallery() {
   const [saveAllOpen, setSaveAllOpen] = useState(false);
   const [zipProgress, setZipProgress] = useState(null);
   const [remaining, setRemaining] = useState({ photos: 0, videos: 0 });
+  const [tab, setTab] = useState('photos');
   const bootedRef = useRef(false);
 
   const deadlineRef = useMemo(
@@ -57,6 +62,10 @@ export default function GuestGallery() {
     () => Object.fromEntries(guests.map((g) => [g.id, g.full_name])),
     [guests],
   );
+
+  const names = wedding ? [wedding.couple_name_1, wedding.couple_name_2].filter(Boolean).join(' & ') : '';
+  const photos = useMemo(() => media.filter((item) => item.type === 'photo'), [media]);
+  const reels = useMemo(() => media.filter((item) => item.type === 'video'), [media]);
 
   // Boot: resolve session for this slug, then load everything
   const boot = useCallback(async () => {
@@ -80,13 +89,12 @@ export default function GuestGallery() {
     setWedding(weddingRow);
     setGuests(guestRows || []);
 
-    const [{ data: mediaRows }] = await Promise.all([
-      supabase
-        .from('media')
-        .select('*')
-        .eq('wedding_id', weddingRow.id)
-        .order('created_at', { ascending: false }),
-    ]);
+    const { data: mediaRows } = await supabase
+      .from('media')
+      .select('*')
+      .eq('wedding_id', weddingRow.id)
+      .order('created_at', { ascending: false });
+
     setMedia(mediaRows || []);
     computeRemaining(weddingRow, mediaRows || [], sessionData);
     setLoading(false);
@@ -180,36 +188,119 @@ export default function GuestGallery() {
     );
   }
 
-  const names = [wedding.couple_name_1, wedding.couple_name_2].filter(Boolean).join(' & ');
   const isLive = !countdown.expired;
+  const activeTabLabel = TABS.find((entry) => entry.id === tab)?.label || 'Photos';
+
+  const emptyPhotos = (
+    <div className="px-4 py-10">
+      <EmptyState icon="📷" title="No photos yet" subtitle="Be the first to share a moment from today.">
+        <button type="button" className="oge-btn-primary mt-3" onClick={() => setUploadOpen(true)} disabled={!isLive}>
+          Snap the first photo
+        </button>
+      </EmptyState>
+    </div>
+  );
+
+  const emptyReels = (
+    <div className="px-4 py-10">
+      <EmptyState icon="🎬" title="No reels yet" subtitle="Hold the shutter in the camera to record a clip of up to 20 seconds.">
+        <button type="button" className="oge-btn-primary mt-3" onClick={() => setUploadOpen(true)} disabled={!isLive}>
+          Record a reel
+        </button>
+      </EmptyState>
+    </div>
+  );
+
+  const emptyNotes = (
+    <div className="px-4 py-6">
+      <EmptyState icon="✉️" title="No notes yet" subtitle="Your words will be the first keepsake here." />
+    </div>
+  );
 
   return (
-    <div className="min-h-dvh bg-cream pb-32">
-      <Hero wedding={wedding} couplesSince={media.length} />
+    <div className="min-h-dvh bg-cream pb-[calc(var(--oge-nav-h)+env(safe-area-inset-bottom))]">
+      <header className="sticky top-0 z-20 flex h-[var(--oge-header-h)] items-center gap-3 border-b border-brown/10 bg-cream/95 px-3 backdrop-blur">
+        <Avatar name={names || 'Wedding'} size="md" ring />
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-display text-[15px] font-semibold text-brown-dark">{names || 'A Celebration'}</p>
+          <p className="truncate text-[11px] text-brown/50">
+            {isLive
+              ? `Closes in ${countdown.days}d ${countdown.hours}h · ${activeTabLabel}`
+              : 'Gallery closed · save what you love'}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setUploadOpen(true)}
+          disabled={!isLive}
+          aria-label="Share a moment"
+          className="flex h-9 w-9 items-center justify-center rounded-xl border border-brown/20 bg-white text-brown transition hover:border-gold hover:text-gold disabled:opacity-40"
+        >
+          <PlusIcon className="h-5 w-5" />
+        </button>
+      </header>
 
-      <div className="mx-auto max-w-3xl space-y-8 px-4">
-        <CountdownBanner weddingDate={wedding.wedding_date} expiresAt={wedding.expires_at} />
+      {!isLive ? (
+        <div className="mx-4 mt-6 rounded-2xl bg-brown/90 p-8 text-center text-cream">
+          <p className="font-display text-xl font-semibold">The gallery has closed</p>
+          <p className="mt-2 text-sm text-cream/80">All media was removed after the 3-day window. The couple now holds every keepsake.</p>
+        </div>
+      ) : (
+        <>
+          {tab === 'photos' && (
+            <PhotoFeed
+              photos={photos}
+              guestNameById={guestNameById}
+              likes={interactions.likes}
+              comments={interactions.comments}
+              session={session}
+              onToggleLike={interactions.toggleLike}
+              onAddComment={interactions.addComment}
+              onDownload={(item) => downloadUrl(item.url, item.url.split('/').pop())}
+              emptyState={emptyPhotos}
+            />
+          )}
 
-        {isLive ? (
-          <>
-            <nav className="flex flex-wrap justify-center gap-2">
-              <button type="button" className="oge-btn-primary" onClick={() => setUploadOpen(true)}>
-                📷 Share a moment
-              </button>
-              <a href="#guestbook" className="oge-btn-outline">✉️ Write a letter</a>
-              <button type="button" className="oge-btn-gold" onClick={saveAll} disabled={media.length === 0}>
-                ⬇ Save all ({media.length})
-              </button>
-            </nav>
+          {tab === 'reels' && (
+            <ReelFeed
+              reels={reels}
+              guestNameById={guestNameById}
+              likes={interactions.likes}
+              comments={interactions.comments}
+              session={session}
+              onToggleLike={interactions.toggleLike}
+              onAddComment={interactions.addComment}
+              onDownload={(item) => downloadUrl(item.url, item.url.split('/').pop())}
+              emptyState={emptyReels}
+            />
+          )}
 
-            {session && (
-              <p className="text-center text-xs tracking-wide text-brown/60">
-                Sharing as <strong className="text-brown">{session.fullName}</strong> ·{' '}
-                {remaining.photos} photo{remaining.photos === 1 ? '' : 's'} & {remaining.videos} video{remaining.videos === 1 ? '' : 's'} left
-              </p>
-            )}
+          {tab === 'notes' && (
+            <NotesFeed
+              messages={book.messages}
+              loading={book.loading}
+              canWrite={isLive && Boolean(session)}
+              onSubmit={book.addMessage}
+              session={session}
+              emptyState={emptyNotes}
+            />
+          )}
 
-            <section className="pt-2">
+          {tab === 'gallery' && (
+            <div className="mx-auto max-w-5xl space-y-4 px-3 py-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-[11px] uppercase tracking-[0.2em] text-brown/45">
+                  {media.length} moment{media.length === 1 ? '' : 's'}
+                </p>
+                <button
+                  type="button"
+                  onClick={saveAll}
+                  disabled={media.length === 0}
+                  className="rounded-full border border-brown/20 px-3 py-1.5 text-xs text-brown/80 transition hover:border-gold hover:text-brown disabled:opacity-40"
+                >
+                  Save all
+                </button>
+              </div>
               <FeedGrid
                 media={media}
                 guestNameById={guestNameById}
@@ -218,23 +309,14 @@ export default function GuestGallery() {
                 session={session}
                 onToggleLike={interactions.toggleLike}
                 onAddComment={interactions.addComment}
-                onDownload={(m) => downloadUrl(m.url, m.url.split('/').pop())}
+                onDownload={(item) => downloadUrl(item.url, item.url.split('/').pop())}
               />
-            </section>
+            </div>
+          )}
+        </>
+      )}
 
-            <Guestbook messages={book.messages} loading={book.loading} canWrite={isLive && Boolean(session)} onSubmit={book.addMessage} />
-
-            <CountdownBanner weddingDate={wedding.wedding_date} expiresAt={wedding.expires_at} variant="inline" />
-          </>
-        ) : (
-          <div className="rounded-2xl bg-brown/90 p-8 text-center text-cream">
-            <p className="font-display text-xl font-semibold">The gallery has closed</p>
-            <p className="mt-2 text-sm text-cream/80">
-              All media was removed after the 3-day window. The couple now holds every keepsake.
-            </p>
-          </div>
-        )}
-      </div>
+      <BottomNav active={tab} onChange={setTab} onUpload={() => setUploadOpen(true)} uploadDisabled={!isLive} />
 
       {isLive && session && (
         <UploadModal
@@ -258,11 +340,7 @@ export default function GuestGallery() {
         <p className="mt-2 text-center text-xs text-brown/60">{zipProgress?.label}</p>
       </Modal>
 
-      <p className="mt-16 text-center text-[11px] tracking-[0.2em] text-brown/40">
-        seen through <span className="font-script text-base text-rose/70">Our Guests' Eyes</span>
-      </p>
-
-      <InstallApp />
+      <InstallApp raised />
     </div>
   );
 }

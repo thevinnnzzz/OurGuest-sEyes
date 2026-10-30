@@ -4,6 +4,8 @@
 
 :root {
   --oge-parchment: #f7efdf;
+  --oge-header-h: 3.5rem;
+  --oge-nav-h: 4.25rem;
 }
 
 html {
@@ -72,6 +74,10 @@ body {
 
 @layer utilities {
   .oge-filter-none { filter: none; }
+  /* Reels fill exactly the space between the app header and the bottom bar. */
+  .oge-feed-height {
+    height: calc(100dvh - var(--oge-header-h) - var(--oge-nav-h) - env(safe-area-inset-bottom));
+  }
   .oge-fade-in { animation: oge-fade 0.5s ease both; }
   @keyframes oge-fade {
     from { opacity: 0; transform: translateY(8px); }

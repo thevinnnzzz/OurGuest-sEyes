@@ -44,10 +44,14 @@ export default function UploadModal({ open, onClose, wedding, remaining, session
   const [checking, setChecking] = useState(false);
   const [cameraOpen, setCameraOpen] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(null);
+  const [caption, setCaption] = useState('');
   const [activeSlide, setActiveSlide] = useState(0);
+  const [dragX, setDragX] = useState(0);
+  const [dragging, setDragging] = useState(false);
   const inputRef = useRef(null);
   const railRef = useRef(null);
   const filesRef = useRef([]);
+  const dragRef = useRef(null);
 
   const cameraSupported =
     typeof navigator !== 'undefined' && Boolean(navigator.mediaDevices?.getUserMedia) && window.isSecureContext;
@@ -68,6 +72,7 @@ export default function UploadModal({ open, onClose, wedding, remaining, session
     setFiles([]);
     setPreviewIndex(null);
     setActiveSlide(0);
+    setCaption('');
   }, [open]);
 
   useEffect(
@@ -112,6 +117,59 @@ export default function UploadModal({ open, onClose, wedding, remaining, session
     e.target.value = '';
   };
 
+  const stepPreview = (delta) => {
+    setPreviewIndex((index) => {
+      if (index === null) return index;
+      return (index + delta + files.length) % files.length;
+    });
+  };
+
+  // Horizontal swipe on the full-screen preview. Waits for the gesture to be
+  // clearly sideways so a vertical drag can still scroll the page.
+  const onViewerPointerDown = (event) => {
+    if (files.length < 2) return;
+    dragRef.current = { startX: event.clientX, startY: event.clientY, lastX: 0, active: false };
+  };
+
+  const onViewerPointerMove = (event) => {
+    const drag = dragRef.current;
+    if (!drag) return;
+    const dx = event.clientX - drag.startX;
+    const dy = event.clientY - drag.startY;
+    if (!drag.active) {
+      if (Math.abs(dx) < 10 || Math.abs(dx) <= Math.abs(dy)) return;
+      drag.active = true;
+      setDragging(true);
+      try {
+        event.currentTarget.setPointerCapture?.(event.pointerId);
+      } catch {
+        /* best effort */
+      }
+    }
+    drag.lastX = dx;
+    setDragX(dx);
+  };
+
+  const onViewerPointerUp = () => {
+    const drag = dragRef.current;
+    dragRef.current = null;
+    if (!drag) return;
+    const dx = drag.lastX || 0;
+    const threshold = Math.min(110, window.innerWidth * 0.16);
+    setDragging(false);
+    setDragX(0);
+    if (drag.active && Math.abs(dx) > threshold) stepPreview(dx > 0 ? -1 : 1);
+  };
+
+  const onViewerPointerLeave = () => {
+    // A small (not yet active) drag that leaves the stage never captured the
+    // pointer, so its pointerup lands elsewhere; drop it and snap back.
+    if (dragRef.current && !dragRef.current.active) {
+      dragRef.current = null;
+      setDragX(0);
+    }
+  };
+
   const removeFile = (id) => {
     setFiles((previous) => {
       const target = previous.find((item) => item.id === id);
@@ -133,14 +191,21 @@ export default function UploadModal({ open, onClose, wedding, remaining, session
           onProgress: (pct) =>
             setProgress({ done: uploaded, total: files.length, label: `Uploading "${item.file.name}" — ${pct}%` }),
         });
-        const { error: dbErr } = await supabase.from('media').insert({
+        const row = {
           wedding_id: wedding.id,
           guest_id: session.guestId,
           cloudinary_public_id: res.publicId,
           url: res.url,
           type: res.type,
           filter_name: res.type === 'photo' ? item.filter || 'none' : null,
-        });
+        };
+
+        // Captions need the optional `caption` column. Retry without it so a
+        // project that has not run the migration can still share media.
+        let { error: dbErr } = await supabase.from('media').insert({ ...row, caption: caption.trim() || null });
+        if (dbErr && /caption/i.test(dbErr.message || '')) {
+          ({ error: dbErr } = await supabase.from('media').insert(row));
+        }
         if (dbErr) throw dbErr;
         uploaded += 1;
         setProgress({ done: uploaded, total: files.length, label: '' });
@@ -148,6 +213,7 @@ export default function UploadModal({ open, onClose, wedding, remaining, session
       onUploaded();
       files.forEach((item) => URL.revokeObjectURL(item.previewUrl));
       setFiles([]);
+      setCaption('');
       onClose();
     } catch (err) {
       setError(err.message || 'Upload failed. Please try again.');
@@ -289,6 +355,21 @@ export default function UploadModal({ open, onClose, wedding, remaining, session
             </div>
           )}
 
+          {files.length > 0 && (
+            <div className="space-y-1.5">
+              <label className="oge-label" htmlFor="mediaCaption">Caption (optional)</label>
+              <input
+                id="mediaCaption"
+                className="oge-input text-sm"
+                placeholder="Say something about these moments…"
+                value={caption}
+                onChange={(event) => setCaption(event.target.value)}
+                maxLength={150}
+                disabled={busy}
+              />
+            </div>
+          )}
+
           {progress.total > 0 && (
             <div className="h-2 overflow-hidden rounded-full bg-beige">
               <div className="h-full bg-gold transition-all" style={{ width: `${(progress.done / progress.total) * 100}%` }} />
@@ -327,12 +408,28 @@ export default function UploadModal({ open, onClose, wedding, remaining, session
             </button>
           </div>
 
-          <div className="flex flex-1 items-center justify-center overflow-hidden">
-            <div className="w-full max-w-2xl overflow-hidden rounded-3xl bg-black shadow-2xl">
+          <div
+            className="flex flex-1 items-center justify-center overflow-hidden"
+            onPointerDown={onViewerPointerDown}
+            onPointerMove={onViewerPointerMove}
+            onPointerUp={onViewerPointerUp}
+            onPointerCancel={onViewerPointerUp}
+            onPointerLeave={onViewerPointerLeave}
+            style={{ touchAction: 'pan-y' }}
+          >
+            <div
+              key={previewItem.id}
+              className="w-full max-w-2xl overflow-hidden rounded-3xl bg-black shadow-2xl"
+              style={{
+                transform: dragX ? `translateX(${dragX}px)` : undefined,
+                transition: dragging ? 'none' : 'transform 180ms ease',
+              }}
+            >
               {previewItem.type === 'photo' ? (
                 <img
                   src={previewItem.previewUrl}
                   alt=""
+                  draggable={false}
                   className="max-h-[75dvh] w-full object-contain"
                   style={{ filter: filterCss(previewItem.filter) }}
                 />
@@ -353,7 +450,7 @@ export default function UploadModal({ open, onClose, wedding, remaining, session
                 <button
                   type="button"
                   aria-label="Previous item"
-                  onClick={() => setPreviewIndex((index) => (index - 1 + files.length) % files.length)}
+                  onClick={() => stepPreview(-1)}
                   className="rounded-full bg-white/10 px-3 py-1 text-xl leading-none"
                 >
                   ‹
@@ -364,12 +461,15 @@ export default function UploadModal({ open, onClose, wedding, remaining, session
                 <button
                   type="button"
                   aria-label="Next item"
-                  onClick={() => setPreviewIndex((index) => (index + 1) % files.length)}
+                  onClick={() => stepPreview(1)}
                   className="rounded-full bg-white/10 px-3 py-1 text-xl leading-none"
                 >
                   ›
                 </button>
-              </div>
+                </div>
+              )}
+            {files.length > 1 && (
+              <p className="mt-2 text-center text-[10px] uppercase tracking-[0.2em] text-cream/40">swipe to browse</p>
             )}
           </div>,
           document.body,

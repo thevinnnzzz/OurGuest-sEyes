@@ -63,9 +63,17 @@ export function useEventInteractions(weddingId, session) {
       setLikes((prev) => prev.filter((l) => l.id !== existing.id));
       await supabase.from('likes').delete().eq('id', existing.id);
     } else {
-      await supabase
+      // Show the like immediately; the realtime refresh reconciles the row id.
+      const optimisticId = `optimistic-${mediaId}-${session.guestId}`;
+      setLikes((prev) => [
+        ...prev,
+        { id: optimisticId, media_id: mediaId, guest_id: session.guestId, wedding_id: weddingId },
+      ]);
+      const { error } = await supabase
         .from('likes')
         .insert({ media_id: mediaId, guest_id: session.guestId, wedding_id: weddingId });
+      if (error) setLikes((prev) => prev.filter((like) => like.id !== optimisticId));
+      refresh();
     }
   };
 

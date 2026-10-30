@@ -34,7 +34,7 @@ function wasDismissed() {
  * from a user gesture). iOS Safari has no such event, so we show the
  * Share → Add to Home Screen instructions instead.
  */
-export default function InstallApp() {
+export default function InstallApp({ raised = false }) {
   const [canPrompt, setCanPrompt] = useState(() => Boolean(getInstallPrompt()));
   const [installed, setInstalled] = useState(() => (typeof window === 'undefined' ? true : isStandalone()));
   const [dismissed, setDismissed] = useState(() => (typeof window === 'undefined' ? true : wasDismissed()));
@@ -88,7 +88,13 @@ export default function InstallApp() {
   const helping = showIosHelp || (ios && !canPrompt);
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+    <div
+      className={`pointer-events-none fixed inset-x-0 z-40 px-3 ${
+        raised
+          ? 'bottom-[calc(var(--oge-nav-h)+env(safe-area-inset-bottom))] pb-2'
+          : 'bottom-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]'
+      }`}
+    >
       <div className="pointer-events-auto mx-auto flex max-w-sm items-center gap-3 rounded-2xl border border-brown/15 bg-cream/95 p-3 shadow-soft backdrop-blur">
         <img src="/icons/icon-192.png" alt="" width="40" height="40" className="h-10 w-10 shrink-0 rounded-xl" />
         <div className="min-w-0 flex-1 text-left">
