@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import Modal from '../ui/Modal.jsx';
 import FilterPicker from './FilterPicker.jsx';
+import CameraCapture from './CameraCapture.jsx';
 import {
   uploadToCloudinary,
   getVideoDuration,
@@ -23,7 +24,11 @@ export default function UploadModal({ open, onClose, wedding, remaining, session
   const [progress, setProgress] = useState({ done: 0, total: 0, label: '' });
   const [error, setError] = useState(null);
   const [checking, setChecking] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
   const inputRef = useRef(null);
+
+  const cameraSupported =
+    typeof navigator !== 'undefined' && Boolean(navigator.mediaDevices?.getUserMedia) && window.isSecureContext;
 
   // `remaining` already holds how many of each type this guest can still add
   // (the wedding limit minus their own uploads), so use it as-is.
@@ -125,6 +130,15 @@ export default function UploadModal({ open, onClose, wedding, remaining, session
             <strong>{remainingVideos}</strong> video{remainingVideos === 1 ? '' : 's'}.
           </p>
 
+          {cameraSupported && (
+            <>
+              <button type="button" onClick={() => setCameraOpen(true)} className="oge-btn-primary w-full">
+                📸 Quick snap — photo or video
+              </button>
+              <p className="text-center text-[11px] uppercase tracking-[0.2em] text-brown/45">or from your device</p>
+            </>
+          )}
+
           <label className="block cursor-pointer rounded-2xl border-2 border-dashed border-brown/25 bg-white/60 p-8 text-center transition hover:border-gold hover:bg-white/80">
             <input
               ref={inputRef}
@@ -179,6 +193,24 @@ export default function UploadModal({ open, onClose, wedding, remaining, session
           </div>
         </div>
       )}
+      <CameraCapture
+        open={cameraOpen}
+        onClose={() => setCameraOpen(false)}
+        initialFilter={filter}
+        remainingPhotos={remainingPhotos - files.filter((item) => item.type === 'photo').length}
+        remainingVideos={remainingVideos - files.filter((item) => item.type === 'video').length}
+        onCapture={({ files: captured, filter: chosenFilter }) => {
+          setFilter(chosenFilter);
+          setFiles((previous) => [
+            ...previous,
+            ...captured.map((file) => ({
+              file,
+              type: file.type.startsWith('video/') ? 'video' : 'photo',
+            })),
+          ]);
+          setError(null);
+        }}
+      />
     </Modal>
   );
 }

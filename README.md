@@ -46,3 +46,4 @@ A wedding media-sharing platform: guests scan a QR code, check in, share photos/
 - QR codes are generated client-side (`qrcode`, PNG download, no service).
 - Save-all uses client-side `jszip`; media fetches are CORS-enabled by Cloudinary's unsigned endpoints.
 - File sizes gated client-side to 20 MB (photo) / 100 MB (video), and videos to 20 seconds (duration read locally with a throwaway `<video>` element before upload).
+- In-app camera (`getUserMedia` + `MediaRecorder`): tap the shutter for a photo, hold it for a video that stops itself at 20 seconds. The same CSS filter presets apply live and are stored as `filter_name`; nothing uploads until the guest taps Share.

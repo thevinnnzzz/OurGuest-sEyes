@@ -1,8 +1,7 @@
-import { useState } from 'react';
 import { PHOTO_FILTERS, filterCss } from '../../lib/constants.js';
 
 export default function FilterPicker({ value, onChange }) {
-  const [preview, setPreview] = useState(value);
+  const preview = value;
 
   return (
     <div className="space-y-3">
@@ -12,10 +11,7 @@ export default function FilterPicker({ value, onChange }) {
           <button
             key={f.id}
             type="button"
-            onClick={() => {
-              setPreview(f.id);
-              onChange(f.id);
-            }}
+            onClick={() => onChange(f.id)}
             className={`group rounded-xl border p-1 transition ${
               preview === f.id ? 'border-gold ring-1 ring-gold' : 'border-brown/15 hover:border-brown/40'
             }`}
