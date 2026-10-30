@@ -1,0 +1,30 @@
+{
+  "name": "our-guests-eyes",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Wedding QR code photo & video sharing platform",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "dev:server": "node server/index.js",
+    "start": "node server/index.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.64.0",
+    "dayjs": "^1.11.18",
+    "jszip": "^3.10.1",
+    "qrcode": "^1.5.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.30.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.6.0",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.14",
+    "vite": "^5.4.10"
+  }
+}

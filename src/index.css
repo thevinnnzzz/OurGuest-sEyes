@@ -1,0 +1,82 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --oge-parchment: #f7efdf;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-cream text-ink font-body antialiased;
+  background-image: radial-gradient(rgba(201, 169, 106, 0.06) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+@layer components {
+  .oge-btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold tracking-wide transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-gold disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .oge-btn-primary {
+    @apply oge-btn bg-brown text-cream hover:bg-brown-dark shadow-card;
+  }
+  .oge-btn-gold {
+    @apply oge-btn bg-gold/90 text-brown-dark hover:bg-gold shadow-card;
+  }
+  .oge-btn-outline {
+    @apply oge-btn border border-brown/30 bg-white/60 text-brown hover:border-brown/60 hover:bg-beige;
+  }
+  .oge-input {
+    @apply w-full rounded-xl border border-brown/20 bg-white/80 px-4 py-3 font-body text-base text-ink placeholder-brown/40 focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold;
+  }
+  .oge-label {
+    @apply mb-1.5 block text-xs font-semibold uppercase tracking-[0.14em] text-brown/80;
+  }
+  .oge-card {
+    @apply rounded-2xl border border-brown/10 bg-white/70 shadow-soft backdrop-blur-sm;
+  }
+  .oge-divider {
+    @apply my-6 flex items-center justify-center gap-3 text-gold;
+  }
+  /* Vintage parchment letter */
+  .oge-letter {
+    background:
+      radial-gradient(ellipse at top left, rgba(107, 79, 58, 0.08), transparent 55%),
+      radial-gradient(ellipse at bottom right, rgba(201, 138, 138, 0.10), transparent 50%),
+      linear-gradient(
+        160deg,
+        var(--oge-parchment) 0%,
+        #f3e8d2 30%,
+        #efe3c9 70%,
+        #e9dabb 100%
+      );
+    background-blend-mode: multiply;
+    box-shadow:
+      inset 0 0 40px rgba(107, 79, 58, 0.10),
+      0 6px 20px rgba(74, 53, 39, 0.15);
+    border: 1px solid rgba(107, 79, 58, 0.18);
+    border-radius: 10px 14px 10px 14px;
+  }
+  .oge-letter::after {
+    content: '';
+    position: absolute;
+    inset: 6px;
+    pointer-events: none;
+    border: 1px dashed rgba(107, 79, 58, 0.25);
+    border-radius: 8px 12px 8px 12px;
+  }
+}
+
+@layer utilities {
+  .oge-filter-none { filter: none; }
+  .oge-fade-in { animation: oge-fade 0.5s ease both; }
+  @keyframes oge-fade {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .oge-scrollbar::-webkit-scrollbar { height: 6px; width: 6px; }
+  .oge-scrollbar::-webkit-scrollbar-thumb { background: rgba(107, 79, 58, 0.25); border-radius: 999px; }
+}
