@@ -59,8 +59,11 @@ export async function uploadToCloudinary(file, { onProgress } = {}) {
     );
   }
 
-  const type = file.type.startsWith('video/') ? 'video' : 'image';
-  const resourceType = type === 'video' ? 'video' : 'image';
+  // Cloudinary calls these image/video; the app and the media.type check
+  // constraint call them photo/video, so keep the two names separate.
+  const isVideo = file.type.startsWith('video/');
+  const type = isVideo ? 'video' : 'photo';
+  const resourceType = isVideo ? 'video' : 'image';
 
   const endpoint = `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`;
   const form = new FormData();

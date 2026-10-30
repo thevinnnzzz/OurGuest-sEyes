@@ -1,7 +1,8 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Modal from '../ui/Modal.jsx';
-import FilterPicker from './FilterPicker.jsx';
 import CameraCapture from './CameraCapture.jsx';
+import { filterCss } from '../../lib/constants.js';
 import {
   uploadToCloudinary,
   getVideoDuration,
@@ -11,21 +12,42 @@ import {
   cloudinaryReady,
 } from '../../lib/cloudinary.js';
 
+import { supabase } from '../../lib/supabase.js';
+
 function formatDuration(seconds) {
   const total = Math.round(seconds);
   return total >= 60 ? `${Math.floor(total / 60)}m ${total % 60}s` : `${total}s`;
 }
-import { supabase } from '../../lib/supabase.js';
+
+let itemSeq = 0;
+
+/** Pending upload with its own preview URL, filter and type. */
+function makeItem(file, filter = 'none') {
+  itemSeq += 1;
+  return {
+    id: `${Date.now()}-${itemSeq}`,
+    file,
+    type: file.type.startsWith('video/') ? 'video' : 'photo',
+    filter,
+    previewUrl: URL.createObjectURL(file),
+  };
+}
 
 export default function UploadModal({ open, onClose, wedding, remaining, session, onUploaded }) {
   const [files, setFiles] = useState([]);
-  const [filter, setFilter] = useState('none');
+  // Only remembered so the camera reopens on the guest's last preset; every
+  // file carries its own filter, and there is no picker outside the camera.
+  const [lastCameraFilter, setLastCameraFilter] = useState('none');
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState({ done: 0, total: 0, label: '' });
   const [error, setError] = useState(null);
   const [checking, setChecking] = useState(false);
   const [cameraOpen, setCameraOpen] = useState(false);
+  const [previewIndex, setPreviewIndex] = useState(null);
+  const [activeSlide, setActiveSlide] = useState(0);
   const inputRef = useRef(null);
+  const railRef = useRef(null);
+  const filesRef = useRef([]);
 
   const cameraSupported =
     typeof navigator !== 'undefined' && Boolean(navigator.mediaDevices?.getUserMedia) && window.isSecureContext;
@@ -34,6 +56,26 @@ export default function UploadModal({ open, onClose, wedding, remaining, session
   // (the wedding limit minus their own uploads), so use it as-is.
   const remainingPhotos = Math.max(0, remaining?.photos ?? 0);
   const remainingVideos = Math.max(0, remaining?.videos ?? 0);
+
+  useEffect(() => {
+    filesRef.current = files;
+  }, [files]);
+
+  // Release preview object URLs when the sheet closes or the modal unmounts.
+  useEffect(() => {
+    if (open) return;
+    filesRef.current.forEach((item) => URL.revokeObjectURL(item.previewUrl));
+    setFiles([]);
+    setPreviewIndex(null);
+    setActiveSlide(0);
+  }, [open]);
+
+  useEffect(
+    () => () => {
+      filesRef.current.forEach((item) => URL.revokeObjectURL(item.previewUrl));
+    },
+    [],
+  );
 
   const validate = async (list) => {
     const errs = [];
@@ -65,11 +107,19 @@ export default function UploadModal({ open, onClose, wedding, remaining, session
     setChecking(false);
     setError(errs.length ? errs.join(' ') : null);
     setFiles(
-      errs.length === 0
-        ? chosen.map((f) => ({ file: f, type: f.type.startsWith('video/') ? 'video' : 'photo' }))
-        : [],
+      errs.length === 0 ? chosen.map((f) => makeItem(f)) : [],
     );
     e.target.value = '';
+  };
+
+  const removeFile = (id) => {
+    setFiles((previous) => {
+      const target = previous.find((item) => item.id === id);
+      if (target) URL.revokeObjectURL(target.previewUrl);
+      return previous.filter((item) => item.id !== id);
+    });
+    setPreviewIndex(null);
+    setActiveSlide(0);
   };
 
   const submit = async () => {
@@ -89,13 +139,14 @@ export default function UploadModal({ open, onClose, wedding, remaining, session
           cloudinary_public_id: res.publicId,
           url: res.url,
           type: res.type,
-          filter_name: res.type === 'photo' ? filter : null,
+          filter_name: res.type === 'photo' ? item.filter || 'none' : null,
         });
         if (dbErr) throw dbErr;
         uploaded += 1;
         setProgress({ done: uploaded, total: files.length, label: '' });
       }
       onUploaded();
+      files.forEach((item) => URL.revokeObjectURL(item.previewUrl));
       setFiles([]);
       onClose();
     } catch (err) {
@@ -110,6 +161,7 @@ export default function UploadModal({ open, onClose, wedding, remaining, session
 
   if (!wedding) return null;
   const canPick = remainingPhotos > 0 || remainingVideos > 0;
+  const previewItem = previewIndex === null ? null : files[previewIndex] || null;
 
   return (
     <Modal open={open} onClose={busy ? undefined : onClose} title="Share your view" size="lg">
@@ -156,18 +208,85 @@ export default function UploadModal({ open, onClose, wedding, remaining, session
           </label>
 
           {files.length > 0 && (
-            <ul className="space-y-1.5 rounded-xl bg-beige/50 p-4 text-sm">
-              {files.map((f) => (
-                <li key={f.file.name + f.file.size} className="flex items-center justify-between gap-3">
-                  <span className="truncate">{f.file.name}</span>
-                  <span className="text-xs text-brown/50">{f.type}</span>
-                </li>
-              ))}
-            </ul>
-          )}
+            <div className="space-y-2">
+              <div className="flex items-baseline justify-between gap-3">
+                <p className="oge-label mb-0">Ready to share ({files.length})</p>
+                <p className="text-[11px] text-brown/45">Tap a card to preview</p>
+              </div>
 
-          {files.some((f) => f.type === 'photo') && (
-            <FilterPicker value={filter} onChange={setFilter} />
+              <div
+                ref={railRef}
+                onScroll={(event) => {
+                  const rail = event.currentTarget;
+                  const card = rail.firstElementChild;
+                  if (!card) return;
+                  const step = card.getBoundingClientRect().width + 12;
+                  setActiveSlide(Math.min(files.length - 1, Math.round(rail.scrollLeft / step)));
+                }}
+                className="oge-scrollbar -mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-2"
+              >
+                {files.map((item, index) => (
+                  <figure
+                    key={item.id}
+                    className="relative w-36 shrink-0 snap-center overflow-hidden rounded-2xl border border-brown/10 bg-beige shadow-soft"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setPreviewIndex(index)}
+                      aria-label={`Preview ${item.file.name}`}
+                      className="relative block h-44 w-full"
+                    >
+                      {item.type === 'photo' ? (
+                        <img
+                          src={item.previewUrl}
+                          alt=""
+                          className="h-full w-full object-cover"
+                          style={{ filter: filterCss(item.filter) }}
+                        />
+                      ) : (
+                        <>
+                          <video
+                            src={item.previewUrl}
+                            muted
+                            playsInline
+                            preload="metadata"
+                            className="h-full w-full rounded-t-2xl object-cover"
+                          />
+                          <span className="absolute inset-0 flex items-center justify-center text-3xl text-cream drop-shadow">
+                            ▶
+                          </span>
+                        </>
+                      )}
+                    </button>
+                    <span className="absolute left-1.5 top-1.5 rounded-full bg-brown-dark/70 px-2 py-0.5 text-[9px] uppercase tracking-[0.12em] text-cream">
+                      {item.type}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removeFile(item.id)}
+                      aria-label={`Remove ${item.file.name}`}
+                      className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-brown-dark/70 text-sm leading-none text-cream"
+                    >
+                      ×
+                    </button>
+                    <figcaption className="truncate px-2 py-1.5 text-[10px] text-brown/60">{item.file.name}</figcaption>
+                  </figure>
+                ))}
+              </div>
+
+              {files.length > 1 && (
+                <div className="flex justify-center gap-1.5">
+                  {files.map((item, index) => (
+                    <span
+                      key={item.id}
+                      className={`h-1.5 rounded-full transition-all ${
+                        index === activeSlide ? 'w-4 bg-brown/70' : 'w-1.5 bg-brown/25'
+                      }`}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
           )}
 
           {progress.total > 0 && (
@@ -193,20 +312,80 @@ export default function UploadModal({ open, onClose, wedding, remaining, session
           </div>
         </div>
       )}
+      {previewItem &&
+        createPortal(
+          <div className="fixed inset-0 z-[70] flex flex-col bg-brown-dark/95 p-4" role="dialog" aria-modal="true">
+          <div className="flex items-center justify-between gap-3 pb-3 text-cream">
+            <p className="truncate text-xs text-cream/70">{previewItem.file.name}</p>
+            <button
+              type="button"
+              onClick={() => setPreviewIndex(null)}
+              aria-label="Close preview"
+              className="rounded-full bg-white/10 px-3 py-1 text-lg leading-none"
+            >
+              ×
+            </button>
+          </div>
+
+          <div className="flex flex-1 items-center justify-center overflow-hidden">
+            <div className="w-full max-w-2xl overflow-hidden rounded-3xl bg-black shadow-2xl">
+              {previewItem.type === 'photo' ? (
+                <img
+                  src={previewItem.previewUrl}
+                  alt=""
+                  className="max-h-[75dvh] w-full object-contain"
+                  style={{ filter: filterCss(previewItem.filter) }}
+                />
+              ) : (
+                <video
+                  src={previewItem.previewUrl}
+                  controls
+                  autoPlay
+                  playsInline
+                  className="max-h-[75dvh] w-full bg-black"
+                />
+              )}
+            </div>
+          </div>
+
+            {files.length > 1 && (
+              <div className="mt-4 flex items-center justify-center gap-6 text-cream">
+                <button
+                  type="button"
+                  aria-label="Previous item"
+                  onClick={() => setPreviewIndex((index) => (index - 1 + files.length) % files.length)}
+                  className="rounded-full bg-white/10 px-3 py-1 text-xl leading-none"
+                >
+                  ‹
+                </button>
+                <span className="text-xs tracking-wide text-cream/70">
+                  {(previewIndex ?? 0) + 1} / {files.length}
+                </span>
+                <button
+                  type="button"
+                  aria-label="Next item"
+                  onClick={() => setPreviewIndex((index) => (index + 1) % files.length)}
+                  className="rounded-full bg-white/10 px-3 py-1 text-xl leading-none"
+                >
+                  ›
+                </button>
+              </div>
+            )}
+          </div>,
+          document.body,
+        )}
+
       <CameraCapture
         open={cameraOpen}
         onClose={() => setCameraOpen(false)}
-        initialFilter={filter}
+        initialFilter={lastCameraFilter}
         remainingPhotos={remainingPhotos - files.filter((item) => item.type === 'photo').length}
         remainingVideos={remainingVideos - files.filter((item) => item.type === 'video').length}
-        onCapture={({ files: captured, filter: chosenFilter }) => {
-          setFilter(chosenFilter);
+        onCapture={({ shots: captured, filter: chosenFilter }) => {
+          setLastCameraFilter(chosenFilter);
           setFiles((previous) => [
             ...previous,
-            ...captured.map((file) => ({
-              file,
-              type: file.type.startsWith('video/') ? 'video' : 'photo',
-            })),
+            ...captured.map(({ file, filter: shotFilter }) => makeItem(file, shotFilter)),
           ]);
           setError(null);
         }}

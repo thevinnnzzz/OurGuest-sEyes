@@ -155,9 +155,9 @@ export default function CameraCapture({
     setShots([]);
   }, [open]);
 
-  const addShot = useCallback((file, type, duration = null) => {
+  const addShot = useCallback((file, type, duration = null, filterId = 'none') => {
     const url = URL.createObjectURL(file);
-    const shot = { file, type, duration, url };
+    const shot = { file, type, duration, filter: filterId, url };
     shotsRef.current = [...shotsRef.current, shot];
     setShots(shotsRef.current);
   }, []);
@@ -190,12 +190,12 @@ export default function CameraCapture({
           setError('That frame could not be captured. Try again.');
           return;
         }
-        addShot(new File([blob], `snap-${stamp()}.jpg`, { type: 'image/jpeg' }), 'photo');
+        addShot(new File([blob], `snap-${stamp()}.jpg`, { type: 'image/jpeg' }), 'photo', null, filter);
       },
       'image/jpeg',
       0.92,
     );
-  }, [addShot, facing, photoSlots, ready]);
+  }, [addShot, facing, filter, photoSlots, ready]);
 
   const stopRecording = useCallback(() => {
     const recorder = recorderRef.current;
@@ -211,6 +211,7 @@ export default function CameraCapture({
     }
     setError(null);
     chunksRef.current = [];
+    const filterAtStart = filter;
     startedAtRef.current = Date.now();
     const recorder = startRecorder(streamRef.current, (data) => {
       if (data?.size) chunksRef.current.push(data);
@@ -235,7 +236,12 @@ export default function CameraCapture({
       }
       const type = mimeType.split(';')[0];
       const ext = type.includes('mp4') ? 'mp4' : 'webm';
-      addShot(new File([new Blob(chunks, { type })], `clip-${stamp()}.${ext}`, { type }), 'video', duration);
+      addShot(
+        new File([new Blob(chunks, { type })], `clip-${stamp()}.${ext}`, { type }),
+        'video',
+        duration,
+        filterAtStart,
+      );
     };
 
     setRecording(true);
@@ -245,7 +251,7 @@ export default function CameraCapture({
       setElapsed(ms);
       if (ms >= MAX_VIDEO_SECONDS * 1000) stopRecording();
     }, 100);
-  }, [addShot, stopRecording, videoSlots]);
+  }, [addShot, filter, stopRecording, videoSlots]);
 
   const onShutterDown = (event) => {
     event.preventDefault();
@@ -273,7 +279,7 @@ export default function CameraCapture({
 
   const finish = () => {
     stopRecording();
-    onCapture?.({ files: shotsRef.current.map((shot) => shot.file), filter });
+    onCapture?.({ shots: shotsRef.current.map(({ file, filter: shotFilter }) => ({ file, filter: shotFilter })), filter });
     onClose?.();
   };
 

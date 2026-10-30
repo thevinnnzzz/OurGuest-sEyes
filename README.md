@@ -40,7 +40,7 @@ A wedding media-sharing platform: guests scan a QR code, check in, share photos/
 - **3-day lifespan:** `expires_at` is generated in schema as `wedding_date + 3 days` (FK cascade on delete). Guests see a live countdown banner and everything turns read-only after expiry; the hour-run cron (node-cron in `server/index.js`) purges media + rows.
 - **Upload limits:** 10 photos / 5 videos per guest (floor; configurable per wedding, frontend-validated + enforced by remaining-counter).
 - **Duplicate guest names:** unique index on `(wedding_id, lower(trim(full_name)))` + friendly error.
-- **Filters:** CSS-only live filters (Original, HD, 90s Vintage, Retro, Sepia, Classic) stored as media metadata — files stay untouched.
+- **Filters:** CSS-only live filters (Original, HD, 90s Vintage, Retro, Sepia, Classic), chosen inside the camera before capture and stored as media metadata — files stay untouched, and no filter picker is shown in the upload sheet afterwards.
 
 ## Deliberate free-tier notes
 - QR codes are generated client-side (`qrcode`, PNG download, no service).
