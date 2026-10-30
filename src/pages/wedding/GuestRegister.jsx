@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useEvent } from '../../context/EventContext.jsx';
 import { supabaseReady } from '../../lib/supabase.js';
+import InstallApp from '../../components/ui/InstallApp.jsx';
 
 export default function GuestRegister() {
   const { slug } = useParams();
@@ -58,6 +59,8 @@ export default function GuestRegister() {
         Photos & videos will expire as a gallery 3 days after the wedding. Save what you treasure.
       </p>
       <Link to="/" className="mt-4 text-xs text-brown/40 hover:text-brown">← not a guest?</Link>
+
+      <InstallApp />
     </div>
   );
 }

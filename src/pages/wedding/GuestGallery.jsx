@@ -13,6 +13,7 @@ import Guestbook from '../../components/wedding/Guestbook.jsx';
 import UploadModal from '../../components/wedding/UploadModal.jsx';
 import Modal from '../../components/ui/Modal.jsx';
 import Spinner from '../../components/ui/Spinner.jsx';
+import InstallApp from '../../components/ui/InstallApp.jsx';
 
 async function downloadUrl(url, filename) {
   try {
@@ -260,6 +261,8 @@ export default function GuestGallery() {
       <p className="mt-16 text-center text-[11px] tracking-[0.2em] text-brown/40">
         seen through <span className="font-script text-base text-rose/70">Our Guests' Eyes</span>
       </p>
+
+      <InstallApp />
     </div>
   );
 }

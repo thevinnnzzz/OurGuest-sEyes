@@ -2,6 +2,8 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import './index.css';
+// Imported early so the install prompt is captured before React mounts.
+import './lib/install.js';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
