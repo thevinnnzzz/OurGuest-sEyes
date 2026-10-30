@@ -5,6 +5,48 @@ export const cloudinaryReady = Boolean(cloudName && uploadPreset);
 
 export const MAX_PHOTO_MB = 20;
 export const MAX_VIDEO_MB = 100;
+export const MAX_VIDEO_SECONDS = 20;
+
+/**
+ * Reads a local video file's duration in seconds without uploading it.
+ * Resolves null when the browser cannot determine it (e.g. a codec it cannot
+ * decode), so callers can decide how strict to be.
+ */
+export function getVideoDuration(file, timeoutMs = 5000) {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const video = document.createElement('video');
+    let settled = false;
+
+    const finish = (value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      video.removeAttribute('src');
+      video.load();
+      URL.revokeObjectURL(url);
+      resolve(Number.isFinite(value) && value > 0 ? value : null);
+    };
+
+    // Fragmented MP4 and MediaRecorder WebM report `Infinity` until the
+    // browser has scanned to the end, which a seek to a huge time forces.
+    const check = () => {
+      if (Number.isFinite(video.duration) && video.duration > 0) finish(video.duration);
+    };
+
+    const timer = setTimeout(() => finish(null), timeoutMs);
+
+    video.preload = 'metadata';
+    video.addEventListener('loadedmetadata', () => {
+      if (Number.isFinite(video.duration) && video.duration > 0) return finish(video.duration);
+      video.addEventListener('durationchange', check);
+      video.addEventListener('seeked', check);
+      video.currentTime = 1e101;
+    });
+    video.addEventListener('error', () => finish(null));
+    video.src = url;
+  });
+}
 
 /**
  * Uploads a single file to Cloudinary using an unsigned upload preset.

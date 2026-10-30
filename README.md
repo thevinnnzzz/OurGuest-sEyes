@@ -45,4 +45,4 @@ A wedding media-sharing platform: guests scan a QR code, check in, share photos/
 ## Deliberate free-tier notes
 - QR codes are generated client-side (`qrcode`, PNG download, no service).
 - Save-all uses client-side `jszip`; media fetches are CORS-enabled by Cloudinary's unsigned endpoints.
-- File sizes gated client-side to 20 MB (photo) / 100 MB (video).
+- File sizes gated client-side to 20 MB (photo) / 100 MB (video), and videos to 20 seconds (duration read locally with a throwaway `<video>` element before upload).

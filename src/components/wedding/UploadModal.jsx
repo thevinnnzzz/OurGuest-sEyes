@@ -1,7 +1,19 @@
 import { useRef, useState } from 'react';
 import Modal from '../ui/Modal.jsx';
 import FilterPicker from './FilterPicker.jsx';
-import { uploadToCloudinary, MAX_PHOTO_MB, MAX_VIDEO_MB, cloudinaryReady } from '../../lib/cloudinary.js';
+import {
+  uploadToCloudinary,
+  getVideoDuration,
+  MAX_PHOTO_MB,
+  MAX_VIDEO_MB,
+  MAX_VIDEO_SECONDS,
+  cloudinaryReady,
+} from '../../lib/cloudinary.js';
+
+function formatDuration(seconds) {
+  const total = Math.round(seconds);
+  return total >= 60 ? `${Math.floor(total / 60)}m ${total % 60}s` : `${total}s`;
+}
 import { supabase } from '../../lib/supabase.js';
 
 export default function UploadModal({ open, onClose, wedding, remaining, session, onUploaded }) {
@@ -10,12 +22,15 @@ export default function UploadModal({ open, onClose, wedding, remaining, session
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState({ done: 0, total: 0, label: '' });
   const [error, setError] = useState(null);
+  const [checking, setChecking] = useState(false);
   const inputRef = useRef(null);
 
-  const remainingPhotos = Math.max(0, wedding.max_photos_per_guest - remaining.photos);
-  const remainingVideos = Math.max(0, wedding.max_videos_per_guest - remaining.videos);
+  // `remaining` already holds how many of each type this guest can still add
+  // (the wedding limit minus their own uploads), so use it as-is.
+  const remainingPhotos = Math.max(0, remaining?.photos ?? 0);
+  const remainingVideos = Math.max(0, remaining?.videos ?? 0);
 
-  const validate = (list) => {
+  const validate = async (list) => {
     const errs = [];
     const photos = list.filter((f) => f.type.startsWith('image/'));
     const videos = list.filter((f) => f.type.startsWith('video/'));
@@ -23,13 +38,26 @@ export default function UploadModal({ open, onClose, wedding, remaining, session
     if (photos.length > remainingPhotos)errs.push(`You can only add ${remainingPhotos} more photo${remainingPhotos === 1 ? '' : 's'}.`);
     if (videos.length > remainingVideos) errs.push(`You can only add ${remainingVideos} more video${remainingVideos === 1 ? '' : 's'}.`);
     for (const p of photos) if (p.size > MAX_PHOTO_MB * 1024 * 1024) errs.push(`"${p.name}" is over ${MAX_PHOTO_MB} MB.`);
-    for (const v of videos) if (v.size > MAX_VIDEO_MB * 1024 * 1024) errs.push(`"${v.name}" is over ${MAX_VIDEO_MB} MB.`);
+    for (const v of videos) {
+      if (v.size > MAX_VIDEO_MB * 1024 * 1024) {
+        errs.push(`"${v.name}" is over ${MAX_VIDEO_MB} MB.`);
+        continue;
+      }
+      // Read the clip's length locally before uploading; half a second of
+      // tolerance keeps a clip that reports 20.2s from being rejected.
+      const seconds = await getVideoDuration(v);
+      if (seconds && seconds > MAX_VIDEO_SECONDS + 0.5) {
+        errs.push(`"${v.name}" is ${formatDuration(seconds)} long — videos can be up to ${MAX_VIDEO_SECONDS} seconds.`);
+      }
+    }
     return errs;
   };
 
-  const onFilesPicked = (e) => {
+  const onFilesPicked = async (e) => {
     const chosen = Array.from(e.target.files || []);
-    const errs = validate(chosen);
+    setChecking(true);
+    const errs = await validate(chosen);
+    setChecking(false);
     setError(errs.length ? errs.join(' ') : null);
     setFiles(
       errs.length === 0
@@ -109,7 +137,7 @@ export default function UploadModal({ open, onClose, wedding, remaining, session
             <span className="block text-2xl" aria-hidden>📷</span>
             <span className="mt-2 block font-display font-semibold text-brown">Tap to choose photos & videos</span>
             <span className="mt-1 block text-xs text-brown/50">
-              Photos up to {MAX_PHOTO_MB} MB · Videos up to {MAX_VIDEO_MB} MB
+              Photos up to {MAX_PHOTO_MB} MB · Videos up to {MAX_VIDEO_MB} MB and {MAX_VIDEO_SECONDS} seconds
             </span>
           </label>
 
@@ -144,9 +172,9 @@ export default function UploadModal({ open, onClose, wedding, remaining, session
               type="button"
               className="oge-btn-primary"
               onClick={submit}
-              disabled={busy || files.length === 0 || !cloudinaryReady}
+              disabled={busy || checking || files.length === 0 || !cloudinaryReady}
             >
-              {busy ? 'Uploading…' : `Share ${files.length || ''}`}
+              {busy ? 'Uploading…' : checking ? 'Checking length…' : `Share ${files.length || ''}`}
             </button>
           </div>
         </div>
