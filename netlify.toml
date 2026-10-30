@@ -1,0 +1,26 @@
+# Netlify build configuration for Our Guests' Eyes.
+# This app is a client-side Vite SPA: only VITE_* variables belong in Netlify.
+# Server-only values (service role key, Cloudinary API secret, PURGE_API_TOKEN,
+# SERVER_PORT) belong wherever the purge job runs, never in the frontend host.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+  # SERVER_PORT is the local Express purge server's port (4000). It is not a
+  # secret and Netlify never runs that server, but the secrets scanner
+  # substring-matches it against unrelated numbers in the bundle (e.g. the
+  # 86400000 ms-per-day constant) and fails the build. Skip scanning that key
+  # only; all real secrets are still scanned.
+  SECRETS_SCAN_OMIT_KEYS = "SERVER_PORT"
+
+# SPA fallback. /admin and /w/:slug are client-side routes, so a direct hit or
+# refresh on them must serve index.html rather than a 404. Netlify serves real
+# files from dist/ first, so hashed assets and index.html are unaffected.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
