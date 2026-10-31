@@ -12,16 +12,15 @@
 [build.environment]
   NODE_VERSION = "22"
 
-[functions]
-  directory = "netlify/functions"
-  node_bundler = "esbuild"
-
   # SERVER_PORT is the local Express purge server's port (4000). It is not a
   # secret and Netlify never runs that server, but the secrets scanner
   # substring-matches it against unrelated numbers in the bundle (e.g. the
   # 86400000 ms-per-day constant) and fails the build. Skip scanning that key
   # only; all real secrets are still scanned.
   SECRETS_SCAN_OMIT_KEYS = "SERVER_PORT"
+
+[functions]
+  directory = "netlify/functions"
 
 # Admin media deletion: a browser cannot destroy Cloudinary assets (that needs
 # the API secret), so the dashboard's DELETE is served by a function instead of
