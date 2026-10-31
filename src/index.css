@@ -111,3 +111,19 @@ select,
   .oge-scrollbar::-webkit-scrollbar { height: 6px; width: 6px; }
   .oge-scrollbar::-webkit-scrollbar-thumb { background: rgba(107, 79, 58, 0.25); border-radius: 999px; }
 }
+
+/* Heart progress shown while an admin deletes a photo or video. */
+@keyframes oge-heartbeat {
+  0%, 100% { transform: scale(1); }
+  18% { transform: scale(1.14); }
+  36% { transform: scale(0.96); }
+  54% { transform: scale(1.08); }
+  72% { transform: scale(0.99); }
+}
+.oge-heartbeat {
+  transform-origin: center;
+  animation: oge-heartbeat 1s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .oge-heartbeat { animation: none; }
+}

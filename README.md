@@ -25,6 +25,11 @@ A wedding media-sharing platform: guests scan a QR code, check in, share photos/
    SERVER_PORT, SUPABASE_SERVICE_ROLE_KEY, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET, PURGE_API_TOKEN
    ```
 
+   Deleting a photo or video goes through the Express server, since destroying a
+   Cloudinary asset needs the API secret. Vite proxies `/api` to
+   `http://localhost:4000` in dev; in production set `VITE_API_URL` to the
+   deployed server's origin.
+
 5. **Run** — root: `npm install && npm run dev`; server: `npm --prefix server install && npm run dev:server` (or `npm start`).
 
 ## Routes
@@ -35,6 +40,7 @@ A wedding media-sharing platform: guests scan a QR code, check in, share photos/
 | `/admin/login`, `/admin` | owner | Dashboard: all weddings as cards, create/edit, QR generation + PNG download, stats |
 | `/w/:slug` | guests | Register (full name, duplicate-checked) → Gallery: hero, countdown, feed, likes/comments, uploads, guestbook letters, save-all ZIP |
 | `POST /api/purge` (header `x-api-token`) | ops | Force-expire: deletes Cloudinary media then Supabase rows for expired weddings |
+| `DELETE /api/media/:id` (owner bearer token) | owner | Delete one photo or video: removes the Cloudinary asset, then the media row (likes and comments cascade) |
 
 ## Key rules encoded
 - **3-day lifespan:** `expires_at` is generated in schema as `wedding_date + 3 days` (FK cascade on delete). Guests see a live countdown banner and everything turns read-only after expiry; the hour-run cron (node-cron in `server/index.js`) purges media + rows.

@@ -37,3 +37,20 @@ export async function deleteManyCloudinaryAssets(publicIds, resourceType = 'imag
     return 0;
   }
 }
+
+/**
+ * Deletes one asset and reports the real outcome instead of swallowing errors,
+ * so an admin delete can keep the database row when Cloudinary refuses.
+ * @returns {Promise<'deleted'|'missing'>}
+ */
+export async function destroyCloudinaryAsset(publicId, resourceType = 'image') {
+  const res = await cloudinary.uploader.destroy(publicId, {
+    resource_type: resourceType,
+    invalidate: true,
+  });
+  const result = res?.result;
+  if (result === 'ok') return 'deleted';
+  // Nothing left to remove in Cloudinary — treat as success.
+  if (result === 'not found') return 'missing';
+  throw new Error(`cloudinary returned ${result || 'no result'}`);
+}

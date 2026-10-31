@@ -114,6 +114,16 @@ export function LogoutIcon({ className = 'h-5 w-5' }) {
   );
 }
 
+export function TrashIcon({ className = 'h-5 w-5' }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden="true" {...stroke}>
+      <path d="M4 7h16M9 7V5.2A1.2 1.2 0 0 1 10.2 4h3.6A1.2 1.2 0 0 1 15 5.2V7" />
+      <path d="M6.4 7l.7 11.9a1.5 1.5 0 0 0 1.5 1.4h6.8a1.5 1.5 0 0 0 1.5-1.4L17.6 7" />
+      <path d="M10.2 11v6M13.8 11v6" />
+    </svg>
+  );
+}
+
 export function PauseIcon({ className = 'h-10 w-10' }) {
   return (
     <svg viewBox="0 0 24 24" className={className} aria-hidden="true" fill="currentColor">

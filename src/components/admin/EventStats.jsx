@@ -1,14 +1,23 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import QRCodePanel from './QRCodePanel.jsx';
 import { filterCss } from '../../lib/constants.js';
 import { supabase } from '../../lib/supabase.js';
+import Modal from '../ui/Modal.jsx';
+import { TrashIcon } from '../feed/icons.jsx';
+import { deleteMediaFile } from '../../lib/adminMedia.js';
 
 const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
 
-export default function EventStats({ wedding, stats, onClose }) {
+export default function EventStats({ wedding, stats, onClose, onMediaDeleted }) {
   const [tab, setTab] = useState('overview');
   const [media, setMedia] = useState([]);
   const [guests, setGuests] = useState([]);
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+  const [deleteError, setDeleteError] = useState(null);
+  const [notice, setNotice] = useState(null);
+  const [deleteProgress, setDeleteProgress] = useState(0);
+  const progressTimer = useRef(null);
 
   useEffect(() => {
     if (tab !== 'media' || !wedding?.id) return;
@@ -21,6 +30,54 @@ export default function EventStats({ wedding, stats, onClose }) {
       setGuests(guestRows || []);
     })();
   }, [tab, wedding?.id]);
+
+  useEffect(() => {
+    if (!notice) return undefined;
+    const timer = setTimeout(() => setNotice(null), 5000);
+    return () => clearTimeout(timer);
+  }, [notice]);
+
+  const stopProgress = () => {
+    if (progressTimer.current) {
+      clearInterval(progressTimer.current);
+      progressTimer.current = null;
+    }
+  };
+
+  // Never leave a timer running if the dialog goes away mid-delete.
+  useEffect(() => () => stopProgress(), []);
+
+  const confirmDelete = async () => {
+    if (!pendingDelete || deletingId) return;
+    const target = pendingDelete;
+    setDeletingId(target.id);
+    setDeleteError(null);
+
+    // One request does the whole delete, so the bar eases toward the end while
+    // the server works and snaps to 100% when it answers.
+    stopProgress();
+    setDeleteProgress(8);
+    progressTimer.current = setInterval(() => {
+      setDeleteProgress((p) => (p >= 92 ? p : Math.min(92, p + Math.max(1.5, (92 - p) * 0.12))));
+    }, 140);
+
+    try {
+      await deleteMediaFile(target);
+      stopProgress();
+      setDeleteProgress(100);
+      await new Promise((resolve) => setTimeout(resolve, 550));
+      setMedia((rows) => rows.filter((row) => row.id !== target.id));
+      setNotice(`Deleted the ${target.type}. It is gone from the guest gallery too.`);
+      setPendingDelete(null);
+      onMediaDeleted?.();
+    } catch (err) {
+      stopProgress();
+      setDeleteProgress(0);
+      setDeleteError(err.message || 'Could not delete this item.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   if (!wedding) return null;
   const names = [wedding.couple_name_1, wedding.couple_name_2].filter(Boolean).join(' & ');
@@ -77,27 +134,44 @@ export default function EventStats({ wedding, stats, onClose }) {
         )}
 
         {tab === 'media' && (
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-            {media.length === 0 && <p className="col-span-full py-6 text-center text-sm text-brown/60">No media shared yet.</p>}
-            {media.map((m) => (
-              <div key={m.id} className="overflow-hidden rounded-xl border border-brown/10 bg-white">
-                {m.type === 'video' ? (
-                  <video src={m.url} muted className="h-24 w-full object-cover" preload="metadata" />
-                ) : (
-                  <img
-                    src={m.url}
-                    alt=""
-                    loading="lazy"
-                    className="h-24 w-full object-cover"
-                    style={{ filter: filterCss(m.filter_name) }}
-                  />
-                )}
-                <p className="truncate p-1.5 text-[10px] text-brown/60">
-                  {guestNameById[m.guest_id] || 'Guest'} · {m.type}
-                </p>
-              </div>
-            ))}
-          </div>
+          <>
+            {notice && (
+              <p className="mb-3 rounded-xl bg-green-100 px-3 py-2 text-center text-xs font-medium text-green-800">{notice}</p>
+            )}
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+              {media.length === 0 && <p className="col-span-full py-6 text-center text-sm text-brown/60">No media shared yet.</p>}
+              {media.map((m) => {
+                const guestName = guestNameById[m.guest_id] || 'Guest';
+                return (
+                  <div key={m.id} className="relative overflow-hidden rounded-xl border border-brown/10 bg-white">
+                    {m.type === 'video' ? (
+                      <video src={m.url} muted playsInline className="h-24 w-full object-cover" preload="metadata" />
+                    ) : (
+                      <img
+                        src={m.url}
+                        alt=""
+                        loading="lazy"
+                        className="h-24 w-full object-cover"
+                        style={{ filter: filterCss(m.filter_name) }}
+                      />
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => { setDeleteError(null); setPendingDelete({ ...m, guestName }); }}
+                      disabled={deletingId === m.id}
+                      aria-label={`Delete ${m.type} shared by ${guestName}`}
+                      className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-brown-dark/60 text-cream backdrop-blur transition hover:bg-rose disabled:opacity-60"
+                    >
+                      <TrashIcon className="h-4 w-4" />
+                    </button>
+                    <p className="truncate p-1.5 text-[10px] text-brown/60">
+                      {guestName} · {m.type}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          </>
         )}
 
         {tab === 'guests' && (
@@ -113,7 +187,103 @@ export default function EventStats({ wedding, stats, onClose }) {
             ))}
           </ul>
         )}
+
+        <Modal
+          open={Boolean(pendingDelete)}
+          onClose={() => { if (!deletingId) setPendingDelete(null); }}
+          title={pendingDelete?.type === 'video' ? 'Delete this video?' : 'Delete this photo?'}
+        >
+          {pendingDelete && (
+            <div className="relative">
+              <div className="space-y-4">
+                <div className="overflow-hidden rounded-2xl border border-brown/10 bg-brown-dark/5">
+                  {pendingDelete.type === 'video' ? (
+                    <video src={pendingDelete.url} controls playsInline className="max-h-56 w-full bg-brown-dark/90 object-contain" />
+                  ) : (
+                    <img
+                      src={pendingDelete.url}
+                      alt=""
+                      className="max-h-56 w-full object-cover"
+                      style={{ filter: filterCss(pendingDelete.filter_name) }}
+                    />
+                  )}
+                </div>
+                <p className="text-sm text-brown/75">
+                  Shared by <span className="font-semibold text-brown">{pendingDelete.guestName}</span>. Deleting removes it
+                  from the guest gallery and from Cloudinary for good, along with its likes and comments. This cannot be undone.
+                </p>
+                {deleteError && <p className="rounded-xl bg-rose/10 p-3 text-sm text-rose-dark">{deleteError}</p>}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    className="oge-btn-outline flex-1 py-2.5 text-sm"
+                    onClick={() => setPendingDelete(null)}
+                    disabled={Boolean(deletingId)}
+                  >
+                    Keep it
+                  </button>
+                  <button
+                    type="button"
+                    className="oge-btn flex-1 bg-rose py-2.5 text-sm text-cream hover:bg-rose-dark disabled:opacity-60"
+                    onClick={confirmDelete}
+                    disabled={Boolean(deletingId)}
+                  >
+                    {deletingId ? 'Deleting…' : 'Delete for good'}
+                  </button>
+                </div>
+              </div>
+
+              {deletingId && (
+                <div
+                  role="status"
+                  aria-live="polite"
+                  aria-busy="true"
+                  className="absolute -inset-6 z-20 flex flex-col items-center justify-center gap-4 rounded-3xl bg-cream/95 px-6 text-center backdrop-blur-sm"
+                >
+                  <HeartProgress value={deleteProgress} />
+                  <p className="font-display text-lg font-semibold text-brown">
+                    {deleteProgress >= 100 ? 'Deleted' : `Deleting this ${pendingDelete.type}…`}
+                  </p>
+                  <div className="w-full max-w-[16rem]">
+                    <div className="h-2 overflow-hidden rounded-full bg-brown/10">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-rose/60 to-rose transition-[width] duration-200 ease-out"
+                        style={{ width: `${deleteProgress}%` }}
+                      />
+                    </div>
+                    <div className="mt-2 flex items-center justify-between text-[11px] text-brown/55">
+                      <span>{deleteProgress >= 100 ? 'Removed from Cloudinary' : 'Removing from Cloudinary'}</span>
+                      <span className="tabular-nums">{Math.round(deleteProgress)}%</span>
+                    </div>
+                    <p className="mt-2 text-[11px] text-brown/45">Please keep this window open.</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </Modal>
       </div>
     </div>
+  );
+}
+
+/** A beating heart that fills from the bottom as the delete progresses. */
+function HeartProgress({ value }) {
+  const clamped = Math.max(0, Math.min(100, value));
+  // The heart path spans roughly y=4.5 (top) to y=20.7 (bottom).
+  const top = 20.7 - 16.2 * (clamped / 100);
+  const heart =
+    'M12 20.7 4.6 13.4a4.6 4.6 0 0 1 0-6.6 4.7 4.7 0 0 1 6.6 0l.8.8.8-.8a4.7 4.7 0 0 1 6.6 0 4.6 4.6 0 0 1 0 6.6Z';
+
+  return (
+    <svg viewBox="0 0 24 24" className="oge-heartbeat h-20 w-20 text-rose" aria-hidden="true">
+      <defs>
+        <clipPath id="oge-heart-clip">
+          <rect x="0" y={top} width="24" height="24" />
+        </clipPath>
+      </defs>
+      <path d={heart} fill="none" stroke="currentColor" strokeOpacity="0.28" strokeWidth="1.1" strokeLinejoin="round" />
+      <path d={heart} fill="currentColor" clipPath="url(#oge-heart-clip)" />
+    </svg>
   );
 }

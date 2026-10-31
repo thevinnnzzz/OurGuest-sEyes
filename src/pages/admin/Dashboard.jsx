@@ -25,22 +25,30 @@ export default function Dashboard() {
 
   useEffect(() => {
     let sub;
+    let cancelled = false;
     const init = async () => {
       if (!supabaseReady) return setWeddings([]);
       const { data: auth } = await supabase.auth.getUser();
+      if (cancelled) return;
       if (!auth?.user) {
         navigate('/admin/login');
         return;
       }
       setAccountEmail(auth.user.email || 'Owner');
       await load();
+      // React re-runs this effect during development, so a shared channel name
+      // would hand back an already-subscribed channel and throw on .on().
+      if (cancelled) return;
       sub = supabase
-        .channel('dashboard-weddings')
+        .channel(`dashboard-weddings-${Date.now()}`)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'weddings' }, load)
         .subscribe();
     };
     init();
-    return () => sub && supabase.removeChannel(sub);
+    return () => {
+      cancelled = true;
+      if (sub) supabase.removeChannel(sub);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -197,6 +205,7 @@ export default function Dashboard() {
           wedding={viewWedding}
           stats={statsByWedding[viewWedding.id]}
           onClose={() => setViewWedding(null)}
+          onMediaDeleted={load}
         />
       )}
 
