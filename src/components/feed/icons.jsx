@@ -105,6 +105,15 @@ export function MuteIcon({ muted, className = 'h-5 w-5' }) {
   );
 }
 
+export function LogoutIcon({ className = 'h-5 w-5' }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden="true" {...stroke}>
+      <path d="M15 4.5h3.5a1.5 1.5 0 0 1 1.5 1.5v12a1.5 1.5 0 0 1-1.5 1.5H15" />
+      <path d="M10.5 15.5 14 12l-3.5-3.5M14 12H4" />
+    </svg>
+  );
+}
+
 export function PauseIcon({ className = 'h-10 w-10' }) {
   return (
     <svg viewBox="0 0 24 24" className={className} aria-hidden="true" fill="currentColor">

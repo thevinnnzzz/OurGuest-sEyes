@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase, supabaseReady } from '../../lib/supabase.js';
 import WeddingCard from '../../components/admin/WeddingCard.jsx';
@@ -6,6 +6,8 @@ import WeddingForm from '../../components/admin/WeddingForm.jsx';
 import EventStats from '../../components/admin/EventStats.jsx';
 import QRCodePanel from '../../components/admin/QRCodePanel.jsx';
 import Spinner from '../../components/ui/Spinner.jsx';
+import Avatar from '../../components/feed/Avatar.jsx';
+import { LogoutIcon, PlusIcon } from '../../components/feed/icons.jsx';
 
 const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
 
@@ -17,6 +19,9 @@ export default function Dashboard() {
   const [editing, setEditing] = useState(null);
   const [qrWedding, setQrWedding] = useState(null);
   const [viewWedding, setViewWedding] = useState(null);
+  const [accountEmail, setAccountEmail] = useState('');
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
 
   useEffect(() => {
     let sub;
@@ -27,6 +32,7 @@ export default function Dashboard() {
         navigate('/admin/login');
         return;
       }
+      setAccountEmail(auth.user.email || 'Owner');
       await load();
       sub = supabase
         .channel('dashboard-weddings')
@@ -37,6 +43,23 @@ export default function Dashboard() {
     return () => sub && supabase.removeChannel(sub);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Close the account menu on outside tap or Escape, like a native sheet.
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+    const onPointerDown = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) setMenuOpen(false);
+    };
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') setMenuOpen(false);
+    };
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [menuOpen]);
 
   const load = async () => {
     const [weddingsRes, guestsRes, mediaRes, likesRes, messagesRes] = await Promise.all([
@@ -85,14 +108,46 @@ export default function Dashboard() {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              className="oge-btn-primary px-4 py-2 text-xs"
+              className="oge-btn-primary flex items-center gap-1.5 px-3 py-2 text-xs sm:px-4"
               onClick={() => { setEditing(null); setFormOpen(true); }}
             >
-              + New wedding
+              <PlusIcon className="h-4 w-4" />
+              <span className="hidden sm:inline">New wedding</span>
             </button>
-            <button type="button" className="oge-btn-outline px-3 py-2 text-xs" onClick={logout}>
-              Log out
-            </button>
+
+            <div className="relative" ref={menuRef}>
+              <button
+                type="button"
+                onClick={() => setMenuOpen((value) => !value)}
+                aria-haspopup="menu"
+                aria-expanded={menuOpen}
+                aria-label="Account menu"
+                className="flex items-center rounded-full border border-brown/15 bg-white p-0.5 transition hover:border-gold focus:outline-none focus-visible:ring-2 focus-visible:ring-gold/60"
+              >
+                <Avatar name={accountEmail || 'Owner'} size="md" />
+              </button>
+
+              {menuOpen && (
+                <div
+                  role="menu"
+                  className="oge-fade-in absolute right-0 top-[calc(100%+0.5rem)] z-40 w-60 overflow-hidden rounded-2xl border border-brown/10 bg-cream shadow-soft"
+                >
+                  <div className="border-b border-brown/10 px-4 py-3">
+                    <p className="text-[10px] uppercase tracking-[0.22em] text-brown/45">signed in as</p>
+                    <p className="mt-1 truncate text-sm font-medium text-brown">{accountEmail || 'Owner'}</p>
+                  </div>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={logout}
+                    className="flex w-full items-center gap-2.5 px-4 py-3 text-left text-sm text-brown transition hover:bg-beige"
+                  >
+                    <LogoutIcon className="h-4 w-4 text-brown/70" />
+                    Log out
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </nav>
