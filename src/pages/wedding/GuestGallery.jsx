@@ -6,7 +6,7 @@ import { useCountdown } from '../../hooks/useCountdown.js';
 import { useEventInteractions } from '../../hooks/useEventInteractions.js';
 import { useGuestbook } from '../../hooks/useGuestbook.js';
 import { supabase, supabaseReady } from '../../lib/supabase.js';
-import FeedGrid from '../../components/wedding/Feed.jsx';
+import GuestAlbums from '../../components/wedding/GuestAlbums.jsx';
 import UploadModal from '../../components/wedding/UploadModal.jsx';
 import Modal from '../../components/ui/Modal.jsx';
 import HeartLoader from '../../components/ui/HeartLoader.jsx';
@@ -301,14 +301,12 @@ export default function GuestGallery() {
                   Save all
                 </button>
               </div>
-              <FeedGrid
+              <GuestAlbums
                 media={media}
                 guestNameById={guestNameById}
                 likes={interactions.likes}
-                comments={interactions.comments}
                 session={session}
                 onToggleLike={interactions.toggleLike}
-                onAddComment={interactions.addComment}
                 onDownload={(item) => downloadUrl(item.url, item.url.split('/').pop())}
               />
             </div>
