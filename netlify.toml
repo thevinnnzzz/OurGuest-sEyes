@@ -1,7 +1,9 @@
 # Netlify build configuration for Our Guests' Eyes.
-# This app is a client-side Vite SPA: only VITE_* variables belong in Netlify.
-# Server-only values (service role key, Cloudinary API secret, PURGE_API_TOKEN,
-# SERVER_PORT) belong wherever the purge job runs, never in the frontend host.
+# The frontend is a client-side Vite SPA; the only server code hosted here is the
+# media-delete function below. VITE_* values are inlined into the browser
+# bundle, everything else is read by that function at request time and never
+# reaches the browser. PURGE_API_TOKEN and SERVER_PORT belong to the local purge
+# server, not this host.
 
 [build]
   command = "npm run build"
@@ -10,12 +12,25 @@
 [build.environment]
   NODE_VERSION = "22"
 
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
   # SERVER_PORT is the local Express purge server's port (4000). It is not a
   # secret and Netlify never runs that server, but the secrets scanner
   # substring-matches it against unrelated numbers in the bundle (e.g. the
   # 86400000 ms-per-day constant) and fails the build. Skip scanning that key
   # only; all real secrets are still scanned.
   SECRETS_SCAN_OMIT_KEYS = "SERVER_PORT"
+
+# Admin media deletion: a browser cannot destroy Cloudinary assets (that needs
+# the API secret), so the dashboard's DELETE is served by a function instead of
+# the static CDN, which answers 405 for non-GET requests.
+[[redirects]]
+  from = "/api/media/*"
+  to = "/.netlify/functions/media-delete"
+  status = 200
+  force = true
 
 # SPA fallback. /admin and /w/:slug are client-side routes, so a direct hit or
 # refresh on them must serve index.html rather than a 404. Netlify serves real

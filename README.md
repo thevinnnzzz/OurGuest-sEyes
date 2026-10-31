@@ -25,10 +25,10 @@ A wedding media-sharing platform: guests scan a QR code, check in, share photos/
    SERVER_PORT, SUPABASE_SERVICE_ROLE_KEY, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET, PURGE_API_TOKEN
    ```
 
-   Deleting a photo or video goes through the Express server, since destroying a
-   Cloudinary asset needs the API secret. Vite proxies `/api` to
-   `http://localhost:4000` in dev; in production set `VITE_API_URL` to the
-   deployed server's origin.
+   Deleting a photo or video needs the Cloudinary API secret, so it always runs
+   server-side: Vite proxies `/api` to the Express server on port 4000 in dev,
+   and on Netlify the `media-delete` function serves the same route. Only set
+   `VITE_API_URL` if you host the Express server somewhere separately.
 
 5. **Run** — root: `npm install && npm run dev`; server: `npm --prefix server install && npm run dev:server` (or `npm start`).
 
@@ -53,3 +53,17 @@ A wedding media-sharing platform: guests scan a QR code, check in, share photos/
 - Save-all uses client-side `jszip`; media fetches are CORS-enabled by Cloudinary's unsigned endpoints.
 - File sizes gated client-side to 20 MB (photo) / 100 MB (video), and videos to 20 seconds (duration read locally with a throwaway `<video>` element before upload).
 - In-app camera (`getUserMedia` + `MediaRecorder`): tap the shutter for a photo, hold it for a video that stops itself at 20 seconds. The same CSS filter presets apply live and are stored as `filter_name`; nothing uploads until the guest taps Share.
+
+## Deploying on Netlify
+
+The site is a static Vite build plus one function for admin deletions:
+`netlify/functions/media-delete.js`, reached at `DELETE /api/media/:id` through
+the redirect in `netlify.toml`. It shares its logic with the local Express
+server via `shared/deleteMedia.js`. Set these site environment variables:
+
+- `SUPABASE_SERVICE_ROLE_KEY` — verifies the owner's session and deletes the row
+- `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` — destroy the stored asset
+- `VITE_CLOUDINARY_CLOUD_NAME` — reused by the function as the cloud name
+
+No secret is ever sent to the browser: the function only reports whether the
+delete worked, and answers 405/401/404/502 with a readable message otherwise.
