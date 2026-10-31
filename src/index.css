@@ -18,6 +18,31 @@ body {
   background-size: 22px 22px;
 }
 
+/*
+ * App-wide: text is not selectable, so long-press or drag on a phone never
+ * highlights copy. Form fields keep normal selection for typing and editing.
+ */
+html,
+body,
+body * {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+input,
+textarea,
+select,
+[contenteditable='true'],
+[contenteditable=''],
+[contenteditable='plaintext-only'] {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+
 @layer components {
   .oge-btn {
     @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold tracking-wide transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-gold disabled:cursor-not-allowed disabled:opacity-50;
