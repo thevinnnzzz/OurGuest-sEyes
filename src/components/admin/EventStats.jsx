@@ -3,6 +3,7 @@ import QRCodePanel from './QRCodePanel.jsx';
 import { filterCss } from '../../lib/constants.js';
 import { supabase } from '../../lib/supabase.js';
 import Modal from '../ui/Modal.jsx';
+import HeartProgress from '../ui/HeartProgress.jsx';
 import { TrashIcon } from '../feed/icons.jsx';
 import { deleteMediaFile } from '../../lib/adminMedia.js';
 
@@ -264,26 +265,5 @@ export default function EventStats({ wedding, stats, onClose, onMediaDeleted }) 
         </Modal>
       </div>
     </div>
-  );
-}
-
-/** A beating heart that fills from the bottom as the delete progresses. */
-function HeartProgress({ value }) {
-  const clamped = Math.max(0, Math.min(100, value));
-  // The heart path spans roughly y=4.5 (top) to y=20.7 (bottom).
-  const top = 20.7 - 16.2 * (clamped / 100);
-  const heart =
-    'M12 20.7 4.6 13.4a4.6 4.6 0 0 1 0-6.6 4.7 4.7 0 0 1 6.6 0l.8.8.8-.8a4.7 4.7 0 0 1 6.6 0 4.6 4.6 0 0 1 0 6.6Z';
-
-  return (
-    <svg viewBox="0 0 24 24" className="oge-heartbeat h-20 w-20 text-rose" aria-hidden="true">
-      <defs>
-        <clipPath id="oge-heart-clip">
-          <rect x="0" y={top} width="24" height="24" />
-        </clipPath>
-      </defs>
-      <path d={heart} fill="none" stroke="currentColor" strokeOpacity="0.28" strokeWidth="1.1" strokeLinejoin="round" />
-      <path d={heart} fill="currentColor" clipPath="url(#oge-heart-clip)" />
-    </svg>
   );
 }

@@ -9,7 +9,7 @@ import { supabase, supabaseReady } from '../../lib/supabase.js';
 import FeedGrid from '../../components/wedding/Feed.jsx';
 import UploadModal from '../../components/wedding/UploadModal.jsx';
 import Modal from '../../components/ui/Modal.jsx';
-import Spinner from '../../components/ui/Spinner.jsx';
+import HeartLoader from '../../components/ui/HeartLoader.jsx';
 import EmptyState from '../../components/ui/EmptyState.jsx';
 import InstallApp from '../../components/ui/InstallApp.jsx';
 import BottomNav, { TABS } from '../../components/feed/BottomNav.jsx';
@@ -174,7 +174,7 @@ export default function GuestGallery() {
   if (!supabaseReady) {
     return <div className="p-10 text-center text-sm text-brown/70">Gallery is being configured.</div>;
   }
-  if (loading) return <Spinner label="Beauty takes a moment…" />;
+  if (loading) return <HeartLoader label="Beauty takes a moment…" />;
 
   if (notLive) {
     return (

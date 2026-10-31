@@ -124,6 +124,18 @@ select,
   transform-origin: center;
   animation: oge-heartbeat 1s ease-in-out infinite;
 }
+
+/* A soft band sweeping along the loading bar. */
+@keyframes oge-bar-sweep {
+  0% { transform: translateX(-110%); }
+  100% { transform: translateX(320%); }
+}
+.oge-bar-sweep {
+  animation: oge-bar-sweep 1.9s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .oge-heartbeat { animation: none; }
+  /* Park the bar mid-track; the heart holds a still partial fill in JS. */
+  .oge-bar-sweep { animation: none; transform: none; width: 55%; }
 }
