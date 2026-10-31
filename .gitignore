@@ -6,3 +6,4 @@ server/node_modules/
 !.env.example
 *.log
 .DS_Store
+.cloud-attachments/
