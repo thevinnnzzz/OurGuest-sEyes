@@ -63,10 +63,13 @@ create table if not exists public.media (
   url text not null,
   type text not null check (type in ('photo', 'video')),
   filter_name text,
+  -- Rows shared in one upload session share this id and form one carousel post.
+  batch_id uuid,
   created_at timestamptz not null default now()
 );
 
 create index if not exists media_wedding_idx on public.media (wedding_id, created_at desc);
+create index if not exists media_batch_idx on public.media (batch_id, created_at);
 
 -- ------------------------------------------------------------
 -- Likes (one per guest per media)

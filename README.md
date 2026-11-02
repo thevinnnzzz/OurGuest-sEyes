@@ -14,6 +14,11 @@ A wedding media-sharing platform: guests scan a QR code, check in, share photos/
    - `supabase/schema.sql` (tables, RLS, storage bucket for covers)
    - `supabase/seed.sql` (optional demo wedding)
 
+   Already have a database? Run the files in `supabase/migrations/` instead —
+   `20261030_add_media_caption.sql` and `20261102_add_media_batch.sql`. Both are
+   optional at runtime (uploads fall back when a column is missing), but the
+   batch column is what keeps photos and videos shared together in one post.
+
 2. **Supabase Auth** — in Dashboard → Authentication, create your owner account (email + password). Disable email confirmation for simplicity, or confirm manually.
 
 3. **Cloudinary** — create an **unsigned** upload preset (Settings → Upload → Add upload preset → Unsigned).

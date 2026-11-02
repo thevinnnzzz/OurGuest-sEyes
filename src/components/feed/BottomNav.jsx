@@ -1,8 +1,7 @@
-import { CardsIcon, GridIcon, NoteIcon, PlayIcon, PlusIcon } from './icons.jsx';
+import { CardsIcon, GridIcon, NoteIcon, PlusIcon } from './icons.jsx';
 
 export const TABS = [
   { id: 'photos', label: 'Photos', Icon: GridIcon },
-  { id: 'reels', label: 'Reels', Icon: PlayIcon },
   { id: 'notes', label: 'Notes', Icon: NoteIcon },
   { id: 'gallery', label: 'Gallery', Icon: CardsIcon },
 ];

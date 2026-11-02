@@ -13,8 +13,7 @@ import HeartLoader from '../../components/ui/HeartLoader.jsx';
 import EmptyState from '../../components/ui/EmptyState.jsx';
 import InstallApp from '../../components/ui/InstallApp.jsx';
 import BottomNav, { TABS } from '../../components/feed/BottomNav.jsx';
-import PhotoFeed from '../../components/feed/PhotoFeed.jsx';
-import ReelFeed from '../../components/feed/ReelFeed.jsx';
+import MediaFeed from '../../components/feed/MediaFeed.jsx';
 import NotesFeed from '../../components/feed/NotesFeed.jsx';
 import Avatar from '../../components/feed/Avatar.jsx';
 import { PlusIcon } from '../../components/feed/icons.jsx';
@@ -64,9 +63,6 @@ export default function GuestGallery() {
   );
 
   const names = wedding ? [wedding.couple_name_1, wedding.couple_name_2].filter(Boolean).join(' & ') : '';
-  const photos = useMemo(() => media.filter((item) => item.type === 'photo'), [media]);
-  const reels = useMemo(() => media.filter((item) => item.type === 'video'), [media]);
-
   // Boot: resolve session for this slug, then load everything
   const boot = useCallback(async () => {
     if (!supabaseReady || bootedRef.current) return;
@@ -193,19 +189,9 @@ export default function GuestGallery() {
 
   const emptyPhotos = (
     <div className="px-4 py-10">
-      <EmptyState icon="📷" title="No photos yet" subtitle="Be the first to share a moment from today.">
+      <EmptyState icon="📷" title="No moments yet" subtitle="Be the first to share a photo or a short video from today.">
         <button type="button" className="oge-btn-primary mt-3" onClick={() => setUploadOpen(true)} disabled={!isLive}>
-          Snap the first photo
-        </button>
-      </EmptyState>
-    </div>
-  );
-
-  const emptyReels = (
-    <div className="px-4 py-10">
-      <EmptyState icon="🎬" title="No reels yet" subtitle="Hold the shutter in the camera to record a clip of up to 20 seconds.">
-        <button type="button" className="oge-btn-primary mt-3" onClick={() => setUploadOpen(true)} disabled={!isLive}>
-          Record a reel
+          Share the first moment
         </button>
       </EmptyState>
     </div>
@@ -248,8 +234,8 @@ export default function GuestGallery() {
       ) : (
         <>
           {tab === 'photos' && (
-            <PhotoFeed
-              photos={photos}
+            <MediaFeed
+              media={media}
               guestNameById={guestNameById}
               likes={interactions.likes}
               comments={interactions.comments}
@@ -258,20 +244,6 @@ export default function GuestGallery() {
               onAddComment={interactions.addComment}
               onDownload={(item) => downloadUrl(item.url, item.url.split('/').pop())}
               emptyState={emptyPhotos}
-            />
-          )}
-
-          {tab === 'reels' && (
-            <ReelFeed
-              reels={reels}
-              guestNameById={guestNameById}
-              likes={interactions.likes}
-              comments={interactions.comments}
-              session={session}
-              onToggleLike={interactions.toggleLike}
-              onAddComment={interactions.addComment}
-              onDownload={(item) => downloadUrl(item.url, item.url.split('/').pop())}
-              emptyState={emptyReels}
             />
           )}
 

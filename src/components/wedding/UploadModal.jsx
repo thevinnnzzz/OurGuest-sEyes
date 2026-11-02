@@ -184,6 +184,9 @@ export default function UploadModal({ open, onClose, wedding, remaining, session
     setBusy(true);
     setError(null);
     try {
+      // Everything shared in this one go belongs to a single post.
+      const batchId =
+        typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `batch-${Date.now()}`;
       let uploaded = 0;
       for (const item of files) {
         setProgress({ done: uploaded, total: files.length, label: `Uploading "${item.file.name}"…` });
@@ -200,11 +203,20 @@ export default function UploadModal({ open, onClose, wedding, remaining, session
           filter_name: res.type === 'photo' ? item.filter || 'none' : null,
         };
 
-        // Captions need the optional `caption` column. Retry without it so a
-        // project that has not run the migration can still share media.
-        let { error: dbErr } = await supabase.from('media').insert({ ...row, caption: caption.trim() || null });
-        if (dbErr && /caption/i.test(dbErr.message || '')) {
-          ({ error: dbErr } = await supabase.from('media').insert(row));
+        // `batch_id` and `caption` are optional columns. Retry without whichever
+        // one is missing so a project that has not migrated can still upload.
+        const text = caption.trim() || null;
+        const attempts = [
+          { ...row, batch_id: batchId, caption: text },
+          { ...row, batch_id: batchId },
+          { ...row, caption: text },
+          row,
+        ];
+
+        let dbErr;
+        for (const payload of attempts) {
+          ({ error: dbErr } = await supabase.from('media').insert(payload));
+          if (!dbErr || !/batch_id|caption/i.test(dbErr.message || '')) break;
         }
         if (dbErr) throw dbErr;
         uploaded += 1;
