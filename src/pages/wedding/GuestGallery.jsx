@@ -15,8 +15,7 @@ import InstallApp from '../../components/ui/InstallApp.jsx';
 import BottomNav, { TABS } from '../../components/feed/BottomNav.jsx';
 import MediaFeed from '../../components/feed/MediaFeed.jsx';
 import NotesFeed from '../../components/feed/NotesFeed.jsx';
-import Avatar from '../../components/feed/Avatar.jsx';
-import { PlusIcon } from '../../components/feed/icons.jsx';
+import GalleryHeader from '../../components/wedding/GalleryHeader.jsx';
 
 async function downloadUrl(url, filename) {
   try {
@@ -46,7 +45,7 @@ export default function GuestGallery() {
   const [saveAllOpen, setSaveAllOpen] = useState(false);
   const [zipProgress, setZipProgress] = useState(null);
   const [remaining, setRemaining] = useState({ photos: 0, videos: 0 });
-  const [tab, setTab] = useState('photos');
+  const [tab, setTab] = useState(DEFAULT_TAB);
   const bootedRef = useRef(false);
 
   const deadlineRef = useMemo(
@@ -185,7 +184,14 @@ export default function GuestGallery() {
   }
 
   const isLive = !countdown.expired;
-  const activeTabLabel = TABS.find((entry) => entry.id === tab)?.label || 'Photos';
+  const activeTabLabel = TABS.find((entry) => entry.id === tab)?.label || 'Gallery';
+
+  // A new tab always opens at the top of its own content.
+  const changeTab = (next) => {
+    if (next === tab) return;
+    setTab(next);
+    window.scrollTo({ top: 0 });
+  };
 
   const emptyPhotos = (
     <div className="px-4 py-10">
@@ -205,26 +211,14 @@ export default function GuestGallery() {
 
   return (
     <div className="min-h-dvh bg-cream pb-[calc(var(--oge-nav-h)+env(safe-area-inset-bottom))]">
-      <header className="sticky top-0 z-20 flex h-[var(--oge-header-h)] items-center gap-3 border-b border-brown/10 bg-cream/95 px-3 backdrop-blur">
-        <Avatar name={names || 'Wedding'} size="md" ring />
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-display text-[15px] font-semibold text-brown-dark">{names || 'A Celebration'}</p>
-          <p className="truncate text-[11px] text-brown/50">
-            {isLive
-              ? `Closes in ${countdown.days}d ${countdown.hours}h · ${activeTabLabel}`
-              : 'Gallery closed · save what you love'}
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setUploadOpen(true)}
-          disabled={!isLive}
-          aria-label="Share a moment"
-          className="flex h-9 w-9 items-center justify-center rounded-xl border border-brown/20 bg-white text-brown transition hover:border-gold hover:text-gold disabled:opacity-40"
-        >
-          <PlusIcon className="h-5 w-5" />
-        </button>
-      </header>
+      <GalleryHeader
+        guestName={session?.fullName}
+        coupleNames={names}
+        statusText={isLive ? `Closes in ${countdown.days}d ${countdown.hours}h` : 'Gallery closed'}
+        activeTabLabel={activeTabLabel}
+        onShare={() => setUploadOpen(true)}
+        shareDisabled={!isLive}
+      />
 
       {!isLive ? (
         <div className="mx-4 mt-6 rounded-2xl bg-brown/90 p-8 text-center text-cream">
@@ -286,7 +280,7 @@ export default function GuestGallery() {
         </>
       )}
 
-      <BottomNav active={tab} onChange={setTab} onUpload={() => setUploadOpen(true)} uploadDisabled={!isLive} />
+      <BottomNav active={tab} onChange={changeTab} />
 
       {isLive && session && (
         <UploadModal
