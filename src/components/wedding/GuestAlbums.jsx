@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import Modal from '../ui/Modal.jsx';
 import EmptyState from '../ui/EmptyState.jsx';
 import { filterCss } from '../../lib/constants.js';
+import { resolvedGuestName } from '../../lib/attribution.js';
 import NoteCardViewer, { NoteCardTile, useNoteCardImage } from './NoteCard.jsx';
 
 function typeLabel(item) {
@@ -111,7 +112,7 @@ function MediaViewer({ item, author, index, total, onClose, onPrev, onNext, onDo
         <div className="min-w-0">
           <p className="truncate font-display text-base font-semibold">{author}</p>
           <p className="text-[11px] text-cream/60">
-            {typeLabel(item)} · {index + 1} of {total}
+            Captured by: {author} · {typeLabel(item)} {index + 1} of {total}
           </p>
         </div>
         <button
@@ -208,7 +209,7 @@ export default function GuestAlbums({
       if (!grouped.has(key)) {
         grouped.set(key, {
           id: key,
-          name: guestNameById[guestId] || 'A guest',
+          name: resolvedGuestName(guestNameById[guestId]),
           items: [],
           notes: [],
         });
@@ -318,6 +319,9 @@ export default function GuestAlbums({
                       style={{ filter: filterCss(item.filter_name) }}
                     />
                   )}
+                  <span className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-brown-dark/85 to-transparent px-1.5 pb-1 pt-5 text-left text-[9px] leading-tight text-cream/90">
+                    Captured by: {active.name}
+                  </span>
                 </button>
               ))}
 

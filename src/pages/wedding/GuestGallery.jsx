@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import JSZip from 'jszip';
 import { useEvent } from '../../context/EventContext.jsx';
 import { useCountdown } from '../../hooks/useCountdown.js';
 import { useEventInteractions } from '../../hooks/useEventInteractions.js';
@@ -8,7 +7,6 @@ import { useGuestbook } from '../../hooks/useGuestbook.js';
 import { supabase, supabaseReady } from '../../lib/supabase.js';
 import GuestAlbums from '../../components/wedding/GuestAlbums.jsx';
 import UploadModal from '../../components/wedding/UploadModal.jsx';
-import Modal from '../../components/ui/Modal.jsx';
 import HeartLoader from '../../components/ui/HeartLoader.jsx';
 import EmptyState from '../../components/ui/EmptyState.jsx';
 import InstallApp from '../../components/ui/InstallApp.jsx';
@@ -16,7 +14,9 @@ import BottomNav, { DEFAULT_TAB, TABS } from '../../components/feed/BottomNav.js
 import MediaFeed from '../../components/feed/MediaFeed.jsx';
 import NotesFeed from '../../components/feed/NotesFeed.jsx';
 import GalleryHeader from '../../components/wedding/GalleryHeader.jsx';
+import DownloadModal from '../../components/wedding/DownloadModal.jsx';
 import { canShowFloatingUpload, hasGuestPosted } from '../../lib/posting.js';
+import { buildGalleryZip, saveBlob } from '../../lib/downloads.js';
 
 async function downloadUrl(url, filename) {
   try {
@@ -44,7 +44,8 @@ export default function GuestGallery() {
   const [notLive, setNotLive] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [saveAllOpen, setSaveAllOpen] = useState(false);
-  const [zipProgress, setZipProgress] = useState(null);
+  const [saveProgress, setSaveProgress] = useState(null);
+  const [saveResult, setSaveResult] = useState(null);
   const [remaining, setRemaining] = useState({ photos: 0, videos: 0 });
   const [tab, setTab] = useState(DEFAULT_TAB);
   const [justPosted, setJustPosted] = useState(false);
@@ -142,31 +143,36 @@ export default function GuestGallery() {
     setJustPosted(true);
   };
 
-  const saveAll = async () => {
+  const openSaveAll = () => {
+    setSaveResult(null);
+    setSaveProgress(null);
     setSaveAllOpen(true);
-    const zip = new JSZip();
-    for (let i = 0; i < media.length; i++) {
-      setZipProgress({ done: i, total: media.length, label: media[i].url.split('/').pop() });
-      try {
-        const blob = await (await fetch(media[i].url)).blob();
-        const ext = media[i].type === 'video' ? 'mp4' : 'jpg';
-        zip.file(`${String(i + 1).padStart(3, '0')}-by-${(guestNameById[media[i].guest_id] || 'guest').replace(/\s+/g, '-')}.${ext}`, blob);
-      } catch {
-        /* skip */
-      }
+  };
+
+  const runDownload = async (filter) => {
+    setSaveResult(null);
+    setSaveProgress({ done: 0, total: 0, label: 'Packing…' });
+    try {
+      const archive = await buildGalleryZip({
+        media,
+        notes: book.messages,
+        filter,
+        guestNameById,
+        zipName: `${slug}-through-our-guests-eyes.zip`,
+        onProgress: setSaveProgress,
+      });
+      const saved = saveBlob(archive.blob, archive.name);
+      setSaveResult({
+        total: archive.total,
+        included: archive.included,
+        failures: archive.failures.length,
+        fileName: saved.fileName,
+      });
+    } catch (error) {
+      setSaveResult({ error: error.message || 'Could not build the archive.' });
+    } finally {
+      setSaveProgress(null);
     }
-    setZipProgress({ done: media.length, total: media.length, label: 'Sealing the album…' });
-    const out = await zip.generateAsync({ type: 'blob' }, (meta) =>
-      setZipProgress({ done: Math.round(meta.percent / 2), total: media.length, label: 'Compressing…' }),
-    );
-    const url = URL.createObjectURL(out);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${slug}-through-our-guests-eyes.zip`;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 4000);
-    setZipProgress(null);
-    setSaveAllOpen(false);
   };
 
   if (!supabaseReady) {
@@ -280,8 +286,8 @@ export default function GuestGallery() {
                 </p>
                 <button
                   type="button"
-                  onClick={saveAll}
-                  disabled={media.length === 0}
+                  onClick={openSaveAll}
+                  disabled={media.length === 0 && book.messages.length === 0}
                   className="rounded-full border border-brown/20 px-3 py-1.5 text-xs text-brown/80 transition hover:border-gold hover:text-brown disabled:opacity-40"
                 >
                   Save all
@@ -315,16 +321,16 @@ export default function GuestGallery() {
         />
       )}
 
-      <Modal open={saveAllOpen} onClose={() => !zipProgress && setSaveAllOpen(false)} title="Sealing your keepsake…">
-        <p className="mb-4 text-sm text-brown/70">Gathering {media.length} files from every guest into one pocket album.</p>
-        <div className="h-3 overflow-hidden rounded-full bg-beige">
-          <div
-            className="h-full bg-gold transition-all"
-            style={{ width: `${zipProgress && media.length ? (zipProgress.done / media.length) * 100 : 0}%` }}
-          />
-        </div>
-        <p className="mt-2 text-center text-xs text-brown/60">{zipProgress?.label}</p>
-      </Modal>
+      <DownloadModal
+        open={saveAllOpen}
+        onClose={() => setSaveAllOpen(false)}
+        media={media}
+        notes={book.messages}
+        busy={Boolean(saveProgress)}
+        progress={saveProgress}
+        result={saveResult}
+        onDownload={runDownload}
+      />
 
       <InstallApp raised />
     </div>

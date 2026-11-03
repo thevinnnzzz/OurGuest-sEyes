@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import Modal from '../ui/Modal.jsx';
+import { resolvedGuestName } from '../../lib/attribution.js';
 import {
   createNoteCardCanvas,
   downloadNoteCard,
@@ -62,7 +63,7 @@ export function useNoteCardImage(note, scale = 2) {
 /** Square gallery tile: the whole card, fitted, with a paper backing. */
 export function NoteCardTile({ note, onOpen, author }) {
   const src = useNoteCardImage(note, 0.5);
-  const name = author || note.guests?.full_name || 'A guest';
+  const name = resolvedGuestName(author ?? note.guests?.full_name);
 
   return (
     <button
@@ -86,6 +87,9 @@ export function NoteCardTile({ note, onOpen, author }) {
       <span className="absolute left-1.5 top-1.5 rounded-full bg-brown-dark/70 px-2 py-0.5 text-[9px] uppercase tracking-[0.12em] text-cream backdrop-blur">
         Note
       </span>
+      <span className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-brown-dark/85 to-transparent px-1.5 pb-1 pt-5 text-[9px] leading-tight text-cream/90">
+        Written by: {name}
+      </span>
     </button>
   );
 }
@@ -94,6 +98,7 @@ export function NoteCardTile({ note, onOpen, author }) {
 export default function NoteCardViewer({ note, author, onClose }) {
   const src = useNoteCardImage(note, 1);
   const [busy, setBusy] = useState(null);
+  const name = resolvedGuestName(author ?? note?.guests?.full_name);
 
   const save = async (format) => {
     setBusy(format);
@@ -127,6 +132,7 @@ export default function NoteCardViewer({ note, author, onClose }) {
           <p className="text-center text-xs text-brown/50">
             High-resolution keepsake — {NOTE_CARD_WIDTH * 2} × {NOTE_CARD_HEIGHT * 2} px
           </p>
+          <p className="text-center text-xs text-brown/60">Written by: {name}</p>
 
           <div className="flex gap-2">
             <button

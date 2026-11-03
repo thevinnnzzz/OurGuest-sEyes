@@ -1,4 +1,5 @@
 import { filterCss } from '../../lib/constants.js';
+import { resolvedGuestName } from '../../lib/attribution.js';
 
 // CSS live filters are applied on render — the original file is untouched.
 export { filterCss };
@@ -16,7 +17,7 @@ export default function MediaCard({
 }) {
   const isVideo = media.type === 'video';
   const commentList = comments || [];
-  const author = guestNameById[media.guest_id] || 'A guest';
+  const author = resolvedGuestName(guestNameById[media.guest_id]);
 
   const addComment = async (e) => {
     e.preventDefault();

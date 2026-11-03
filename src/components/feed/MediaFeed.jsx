@@ -3,6 +3,7 @@ import dayjs from 'dayjs';
 import Avatar from './Avatar.jsx';
 import { CommentIcon, HeartIcon, SendIcon } from './icons.jsx';
 import { filterCss } from '../../lib/constants.js';
+import { resolvedGuestName } from '../../lib/attribution.js';
 import { groupMediaIntoPosts } from '../../lib/mediaPosts.js';
 
 const FILTER_LABELS = {
@@ -314,6 +315,8 @@ function MediaPost({ post, author, likes, comments, session, onToggleLike, onAdd
           <p className="text-[13px] italic text-brown/45">a moment through {author}’s eyes</p>
         )}
 
+        <p className="text-[11px] text-brown/45">Captured by: {author}</p>
+
         <PostComments
           comments={postComments}
           session={session}
@@ -349,7 +352,7 @@ export default function MediaFeed({
         <MediaPost
           key={post.key}
           post={post}
-          author={guestNameById[post.guestId] || 'A guest'}
+          author={resolvedGuestName(guestNameById[post.guestId])}
           likes={likes}
           comments={comments}
           session={session}

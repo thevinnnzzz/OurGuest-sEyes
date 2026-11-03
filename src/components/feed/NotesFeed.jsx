@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import dayjs from 'dayjs';
 import Avatar from './Avatar.jsx';
+import { resolvedGuestName } from '../../lib/attribution.js';
 
 function NoteCard({ note, author }) {
   const [expanded, setExpanded] = useState(false);
@@ -80,7 +81,7 @@ export default function NotesFeed({ messages, loading, canWrite, onSubmit, sessi
           <NoteCard
             key={message.id}
             note={message}
-            author={message.guests?.full_name || 'A guest'}
+            author={resolvedGuestName(message.guests?.full_name)}
           />
         ))
       )}
