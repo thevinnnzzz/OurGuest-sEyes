@@ -193,6 +193,7 @@ export default function GuestAlbums({
   guestNameById,
   likes = [],
   session,
+  onUpload,
   onToggleLike,
   onDownload,
 }) {
@@ -323,6 +324,20 @@ export default function GuestAlbums({
               {active.notes.map((note) => (
                 <NoteCardTile key={note.id} note={note} author={active.name} onOpen={() => setOpenNote(note)} />
               ))}
+
+              {onUpload && session?.guestId === active.id && (
+                <button
+                  type="button"
+                  onClick={onUpload}
+                  aria-label="Add more to your album"
+                  className="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-brown/30 bg-white text-brown/60 transition hover:border-gold hover:text-gold"
+                >
+                  <span className="text-2xl leading-none" aria-hidden="true">
+                    ＋
+                  </span>
+                  <span className="text-[11px] font-medium">Add more</span>
+                </button>
+              )}
             </div>
           </>
         )}

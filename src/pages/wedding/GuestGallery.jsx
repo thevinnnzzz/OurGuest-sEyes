@@ -16,6 +16,7 @@ import BottomNav, { DEFAULT_TAB, TABS } from '../../components/feed/BottomNav.js
 import MediaFeed from '../../components/feed/MediaFeed.jsx';
 import NotesFeed from '../../components/feed/NotesFeed.jsx';
 import GalleryHeader from '../../components/wedding/GalleryHeader.jsx';
+import { canShowFloatingUpload, hasGuestPosted } from '../../lib/posting.js';
 
 async function downloadUrl(url, filename) {
   try {
@@ -46,6 +47,7 @@ export default function GuestGallery() {
   const [zipProgress, setZipProgress] = useState(null);
   const [remaining, setRemaining] = useState({ photos: 0, videos: 0 });
   const [tab, setTab] = useState(DEFAULT_TAB);
+  const [justPosted, setJustPosted] = useState(false);
   const bootedRef = useRef(false);
 
   const deadlineRef = useMemo(
@@ -137,6 +139,7 @@ export default function GuestGallery() {
       .order('created_at', { ascending: false });
     setMedia(data || []);
     computeRemaining(wedding, data || [], session);
+    setJustPosted(true);
   };
 
   const saveAll = async () => {
@@ -186,6 +189,13 @@ export default function GuestGallery() {
   const isLive = !countdown.expired;
   const activeTabLabel = TABS.find((entry) => entry.id === tab)?.label || 'Gallery';
 
+  // Strict gate for the floating (+) button: one post per guest, then it is gone.
+  // `justPosted` closes the window before the refetch lands, so the button cannot
+  // survive a successful upload even for one frame.
+  const hasPosted =
+    justPosted || hasGuestPosted({ media, notes: book.messages, guestId: session?.guestId });
+  const showUploadButton = canShowFloatingUpload({ hasPosted, isLive, hasSession: Boolean(session) });
+
   // A new tab always opens at the top of its own content.
   const changeTab = (next) => {
     if (next === tab) return;
@@ -195,10 +205,20 @@ export default function GuestGallery() {
 
   const emptyPhotos = (
     <div className="px-4 py-10">
-      <EmptyState icon="📷" title="No moments yet" subtitle="Be the first to share a photo or a short video from today.">
-        <button type="button" className="oge-btn-primary mt-3" onClick={() => setUploadOpen(true)} disabled={!isLive}>
-          Share the first moment
-        </button>
+      <EmptyState
+        icon="📷"
+        title="No moments yet"
+        subtitle={
+          hasPosted
+            ? 'You have already shared something — add more from your album in the Gallery tab.'
+            : 'Be the first to share a photo or a short video from today.'
+        }
+      >
+        {!hasPosted && (
+          <button type="button" className="oge-btn-primary mt-3" onClick={() => setUploadOpen(true)} disabled={!isLive}>
+            Share the first moment
+          </button>
+        )}
       </EmptyState>
     </div>
   );
@@ -216,7 +236,7 @@ export default function GuestGallery() {
         coupleNames={names}
         statusText={isLive ? `Closes in ${countdown.days}d ${countdown.hours}h` : 'Gallery closed'}
         activeTabLabel={activeTabLabel}
-        onShare={() => setUploadOpen(true)}
+        onShare={showUploadButton ? () => setUploadOpen(true) : undefined}
         shareDisabled={!isLive}
       />
 
@@ -273,6 +293,7 @@ export default function GuestGallery() {
                 guestNameById={guestNameById}
                 likes={interactions.likes}
                 session={session}
+                onUpload={isLive ? () => setUploadOpen(true) : undefined}
                 onToggleLike={interactions.toggleLike}
                 onDownload={(item) => downloadUrl(item.url, item.url.split('/').pop())}
               />
