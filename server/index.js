@@ -4,6 +4,7 @@ import cors from 'cors';
 import cron from 'node-cron';
 import { purgeExpiredWeddings } from './purge.js';
 import { deleteMediaById } from '../shared/deleteMedia.js';
+import { deleteEventById } from '../shared/deleteEvent.js';
 
 const app = express();
 app.use(cors());
@@ -30,6 +31,26 @@ app.delete('/api/media/:id', async (req, res) => {
     res.status(status).json({
       error: err.code || 'delete_failed',
       message: err.message || 'Could not delete this item.',
+    });
+  }
+});
+
+// Delete a whole wedding. Same shape as media deletion: the browser sends the
+// owner's Supabase token and the server removes the Cloudinary files first,
+// then the wedding row. The Netlify function event-delete.js shares this logic.
+app.delete('/api/events/:id', async (req, res) => {
+  const token = (req.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  if (!token) return res.status(401).json({ error: 'unauthorized', message: 'Sign in again to delete an event.' });
+
+  try {
+    const result = await deleteEventById(req.params.id, token);
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    const status = err.status || 500;
+    if (status >= 500) console.error('[event] delete failed:', err.message);
+    res.status(status).json({
+      error: err.code || 'delete_failed',
+      message: err.message || 'Could not delete this event.',
     });
   }
 });

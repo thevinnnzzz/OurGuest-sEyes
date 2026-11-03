@@ -31,6 +31,15 @@
   status = 200
   force = true
 
+# Admin event deletion: removes the event's Cloudinary files, then the wedding
+# row (guests, media, notes and sessions cascade). Same reason as media: only
+# the server may hold the Cloudinary secret and the service role key.
+[[redirects]]
+  from = "/api/events/*"
+  to = "/.netlify/functions/event-delete"
+  status = 200
+  force = true
+
 # SPA fallback. /admin and /w/:slug are client-side routes, so a direct hit or
 # refresh on them must serve index.html rather than a 404. Netlify serves real
 # files from dist/ first, so hashed assets and index.html are unaffected.

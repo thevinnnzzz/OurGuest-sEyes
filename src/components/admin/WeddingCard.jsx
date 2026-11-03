@@ -1,4 +1,5 @@
 import dayjs from 'dayjs';
+import { TrashIcon } from '../feed/icons.jsx';
 
 const STATUS_STYLES = {
   live: 'bg-green-100 text-green-800 border-green-300',
@@ -6,7 +7,7 @@ const STATUS_STYLES = {
   expired: 'bg-rose/15 text-rose-dark border-rose/40',
 };
 
-export default function WeddingCard({ wedding, stats, onConfigure, onQr, onView }) {
+export default function WeddingCard({ wedding, stats, onConfigure, onQr, onView, onDelete }) {
   const names = [wedding.couple_name_1, wedding.couple_name_2].filter(Boolean).join(' & ');
   const status = (wedding.status || 'live');
 
@@ -27,6 +28,15 @@ export default function WeddingCard({ wedding, stats, onConfigure, onQr, onView 
         >
           {status}
         </span>
+        <button
+          type="button"
+          onClick={onDelete}
+          aria-label={`Delete the ${names || 'event'} gallery`}
+          title="Delete this event"
+          className="absolute left-3 top-3 rounded-full border border-white/40 bg-brown-dark/45 p-1.5 text-cream transition hover:border-rose hover:bg-rose-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-cream"
+        >
+          <TrashIcon className="h-4 w-4" />
+        </button>
       </div>
 
       <div className="flex flex-1 flex-col gap-3 p-4">
