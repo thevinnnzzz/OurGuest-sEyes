@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase, supabaseReady } from '../lib/supabase.js';
+import { readStoredSessionSync } from '../lib/guestSession.js';
 
 /** Loads and subscribes to the guestbook letters for a wedding. */
 export function useGuestbook(weddingId) {
@@ -33,10 +34,7 @@ export function useGuestbook(weddingId) {
   }, [weddingId]);
 
   const addMessage = async (body) => {
-    const sessionData = JSON.parse(
-      window.sessionStorage.getItem('oge_session') ||
-        window.localStorage.getItem('oge_session') || 'null',
-    );
+    const sessionData = readStoredSessionSync();
     if (!sessionData) throw new Error('No guest session');
     await supabase.from('messages').insert({
       wedding_id: weddingId,

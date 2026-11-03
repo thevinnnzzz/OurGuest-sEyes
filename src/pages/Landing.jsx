@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import EventLookup from '../components/wedding/EventLookup.jsx';
 
 export default function Landing() {
   return (
@@ -7,7 +8,7 @@ export default function Landing() {
       <header className="relative overflow-hidden px-5 py-20 text-center">
         <div aria-hidden className="pointer-events-none absolute -left-24 top-10 h-72 w-72 rounded-full bg-rose/10 blur-3xl" />
         <div aria-hidden className="pointer-events-none absolute -right-24 bottom-0 h-72 w-72 rounded-full bg-gold/10 blur-3xl" />
-        <p className="text-[11px] uppercase tracking-[0.35em] text-brown/60">Every angle. Every tear. Every toast.</p>
+        <p className="text-[11px] uppercase tracking-[0.35em] text-brown/60">A guest? Your gallery opens below.</p>
         <h1 className="mt-4 font-display text-4xl font-bold leading-tight text-brown sm:text-5xl">
           See your wedding through <span className="font-script text-5xl text-rose">Our Guests' Eyes</span>
         </h1>
@@ -15,9 +16,17 @@ export default function Landing() {
           One QR code on every table. Your guests' phones become your wedding album — photos, videos, and
           beautiful letters from everyone you love, kept safe for 3 days of celebrating... and yours forever.
         </p>
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-          <Link to="/admin/login" className="oge-btn-primary">Open the Dashboard</Link>
-          <Link to="/partner" className="oge-btn-outline">Partner with us</Link>
+        <div className="mt-8">
+          <EventLookup />
+        </div>
+
+        <div className="mt-7 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-brown/55">
+          <Link to="/admin/login" className="underline decoration-brown/25 underline-offset-4 hover:text-brown">
+            Couples &amp; planners → owner sign-in
+          </Link>
+          <Link to="/partner" className="underline decoration-brown/25 underline-offset-4 hover:text-brown">
+            Partner with us
+          </Link>
         </div>
       </header>
 
