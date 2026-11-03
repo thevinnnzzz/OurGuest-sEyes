@@ -12,7 +12,7 @@ import Modal from '../../components/ui/Modal.jsx';
 import HeartLoader from '../../components/ui/HeartLoader.jsx';
 import EmptyState from '../../components/ui/EmptyState.jsx';
 import InstallApp from '../../components/ui/InstallApp.jsx';
-import BottomNav, { TABS } from '../../components/feed/BottomNav.jsx';
+import BottomNav, { DEFAULT_TAB, TABS } from '../../components/feed/BottomNav.jsx';
 import MediaFeed from '../../components/feed/MediaFeed.jsx';
 import NotesFeed from '../../components/feed/NotesFeed.jsx';
 import GalleryHeader from '../../components/wedding/GalleryHeader.jsx';
