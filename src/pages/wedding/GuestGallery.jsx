@@ -269,6 +269,7 @@ export default function GuestGallery() {
               </div>
               <GuestAlbums
                 media={media}
+                notes={book.messages}
                 guestNameById={guestNameById}
                 likes={interactions.likes}
                 session={session}

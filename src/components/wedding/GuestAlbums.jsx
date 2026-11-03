@@ -3,9 +3,24 @@ import { createPortal } from 'react-dom';
 import Modal from '../ui/Modal.jsx';
 import EmptyState from '../ui/EmptyState.jsx';
 import { filterCss } from '../../lib/constants.js';
+import NoteCardViewer, { NoteCardTile, useNoteCardImage } from './NoteCard.jsx';
 
 function typeLabel(item) {
   return item.type === 'video' ? 'Reel' : 'Photo';
+}
+
+/** A guest who only wrote a note: their card becomes the album cover. */
+function NoteCover({ note }) {
+  const src = useNoteCardImage(note, 0.5);
+  if (!note) return null;
+  if (!src) {
+    return (
+      <div className="flex h-full w-full items-center justify-center text-3xl text-brown/25" aria-hidden="true">
+        ❦
+      </div>
+    );
+  }
+  return <img src={src} alt="" className="h-full w-full bg-beige object-cover" />;
 }
 
 /** One tile per guest: a cover from their latest photo (or reel) plus a count. */
@@ -13,9 +28,11 @@ function GuestAlbumCard({ album, onOpen }) {
   const cover = album.items.find((item) => item.type === 'photo') || album.items[0];
   const photos = album.items.filter((item) => item.type === 'photo').length;
   const reels = album.items.length - photos;
+  const notes = album.notes.length;
   const counts = [
     photos ? `${photos} photo${photos === 1 ? '' : 's'}` : null,
     reels ? `${reels} reel${reels === 1 ? '' : 's'}` : null,
+    notes ? `${notes} note${notes === 1 ? '' : 's'}` : null,
   ]
     .filter(Boolean)
     .join(' · ');
@@ -28,7 +45,8 @@ function GuestAlbumCard({ album, onOpen }) {
       className="group relative block w-full overflow-hidden rounded-2xl border border-brown/10 bg-white text-left shadow-card transition hover:border-gold focus:outline-none focus-visible:ring-2 focus-visible:ring-gold"
     >
       <div className="relative aspect-[4/5] w-full bg-beige">
-        {cover.type === 'video' ? (
+        {cover ? (
+          cover.type === 'video' ? (
           <video
             src={cover.url}
             muted
@@ -45,6 +63,9 @@ function GuestAlbumCard({ album, onOpen }) {
             className="h-full w-full object-cover"
             style={{ filter: filterCss(cover.filter_name) }}
           />
+          )
+        ) : (
+          <NoteCover note={album.notes[0]} />
         )}
 
         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-brown-dark/90 via-brown-dark/50 to-transparent px-3 pb-3 pt-10">
@@ -168,6 +189,7 @@ function MediaViewer({ item, author, index, total, onClose, onPrev, onNext, onDo
  */
 export default function GuestAlbums({
   media,
+  notes = [],
   guestNameById,
   likes = [],
   session,
@@ -176,22 +198,36 @@ export default function GuestAlbums({
 }) {
   const [openGuestId, setOpenGuestId] = useState(null);
   const [viewerIndex, setViewerIndex] = useState(null);
+  const [openNote, setOpenNote] = useState(null);
 
   const albums = useMemo(() => {
     const grouped = new Map();
-    media.forEach((item) => {
-      const key = item.guest_id || 'unknown';
+    const ensure = (guestId) => {
+      const key = guestId || 'unknown';
       if (!grouped.has(key)) {
         grouped.set(key, {
           id: key,
-          name: guestNameById[item.guest_id] || 'A guest',
+          name: guestNameById[guestId] || 'A guest',
           items: [],
+          notes: [],
         });
       }
-      grouped.get(key).items.push(item);
+      return grouped.get(key);
+    };
+
+    media.forEach((item) => {
+      ensure(item.guest_id).items.push(item);
     });
+
+    // Written notes join their author's album, after the photos and videos.
+    notes
+      .filter((note) => (note.body || '').trim())
+      .forEach((note) => {
+        ensure(note.guest_id).notes.push(note);
+      });
+
     return [...grouped.values()];
-  }, [media, guestNameById]);
+  }, [media, notes, guestNameById]);
 
   const active = albums.find((album) => album.id === openGuestId) || null;
   const viewerItem = active && viewerIndex !== null ? active.items[viewerIndex] : null;
@@ -199,18 +235,19 @@ export default function GuestAlbums({
   const viewerLikes = viewerItem ? likes.filter((like) => like.media_id === viewerItem.id) : [];
   const viewerLiked = Boolean(session && viewerLikes.some((like) => like.guest_id === session.guestId));
 
-  if (!media.length) {
+  if (!media.length && !notes.length) {
     return (
       <EmptyState
         icon="📸"
         title="The gallery is waiting for its first moment"
-        subtitle="Be the one to set the tone — share a photo or video of today."
+        subtitle="Be the one to set the tone — share a photo or video of today, or leave a note."
       />
     );
   }
 
   const closeAlbum = () => {
     setViewerIndex(null);
+    setOpenNote(null);
     setOpenGuestId(null);
   };
 
@@ -240,7 +277,13 @@ export default function GuestAlbums({
         {active && (
           <>
             <p className="-mt-3 mb-3 text-xs text-brown/55">
-              {active.items.length} moment{active.items.length === 1 ? '' : 's'} shared by this guest
+              {[
+                `${active.items.length} moment${active.items.length === 1 ? '' : 's'}`,
+                active.notes.length ? `${active.notes.length} note${active.notes.length === 1 ? '' : 's'}` : null,
+              ]
+                .filter(Boolean)
+                .join(' · ')}{' '}
+              shared by this guest
             </p>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {active.items.map((item, index) => (
@@ -276,6 +319,10 @@ export default function GuestAlbums({
                   )}
                 </button>
               ))}
+
+              {active.notes.map((note) => (
+                <NoteCardTile key={note.id} note={note} author={active.name} onOpen={() => setOpenNote(note)} />
+              ))}
             </div>
           </>
         )}
@@ -295,6 +342,10 @@ export default function GuestAlbums({
           liked={viewerLiked}
           likeCount={viewerLikes.length}
         />
+      )}
+
+      {openNote && (
+        <NoteCardViewer note={openNote} author={active?.name} onClose={() => setOpenNote(null)} />
       )}
     </>
   );
