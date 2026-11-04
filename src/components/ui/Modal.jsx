@@ -33,13 +33,13 @@ export default function Modal({ open, onClose, title, children, size = 'md', foo
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" role="dialog" aria-modal="true">
-      <div className="absolute inset-0 bg-brown-dark/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="oge-backdrop-in absolute inset-0 bg-brown-dark/50 backdrop-blur-sm" onClick={onClose} />
       {footer ? (
         // With a footer the dialog becomes a flex column: the header and the
         // footer stay put and only the body scrolls, so a pinned composer can
         // never cover the content above it.
         <div
-          className={`oge-fade-in relative z-10 flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-3xl bg-cream shadow-2xl sm:max-h-[85dvh] sm:rounded-3xl ${sizes[size]}`}
+          className={`oge-sheet-in relative z-10 flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-3xl bg-cream shadow-2xl sm:max-h-[85dvh] sm:rounded-3xl ${sizes[size]}`}
         >
           <div className="flex-none px-5 pb-3 pt-5 sm:px-6 sm:pt-6">{header}</div>
           <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-4 sm:px-6">{children}</div>
@@ -49,7 +49,7 @@ export default function Modal({ open, onClose, title, children, size = 'md', foo
         </div>
       ) : (
         <div
-          className={`oge-fade-in relative z-10 max-h-[92dvh] w-full overflow-y-auto rounded-t-3xl bg-cream p-6 shadow-2xl sm:rounded-3xl ${sizes[size]}`}
+          className={`oge-sheet-in relative z-10 max-h-[92dvh] w-full overflow-y-auto rounded-t-3xl bg-cream p-6 shadow-2xl sm:rounded-3xl ${sizes[size]}`}
         >
           <div className="mb-4">{header}</div>
           {children}

@@ -28,6 +28,12 @@ export default {
         soft: '0 8px 30px rgba(107, 79, 58, 0.12)',
         card: '0 4px 16px rgba(107, 79, 58, 0.10)',
       },
+      // `transition` also covers the press-in `scale` used by every button,
+      // so a tap eases instead of snapping.
+      transitionProperty: {
+        DEFAULT:
+          'color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, scale, filter, backdrop-filter',
+      },
     },
   },
   plugins: [],

@@ -5,14 +5,24 @@ import { CommentIcon, HeartIcon } from './icons.jsx';
 import CommentsSheet from './CommentsSheet.jsx';
 import { resolvedGuestName } from '../../lib/attribution.js';
 
-function NoteCard({ note, author, likes, comments, session, onToggleLike, onAddComment }) {
+function NoteCard({
+  note,
+  author,
+  likes,
+  comments,
+  commentLikes,
+  session,
+  onToggleLike,
+  onAddComment,
+  onToggleCommentLike,
+}) {
   const [expanded, setExpanded] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
 
   const likedByMe = Boolean(session && likes.some((like) => like.guest_id === session.guestId));
 
   return (
-    <article className="rounded-2xl border border-brown/10 bg-white p-3.5 shadow-card">
+    <article className="oge-post-in rounded-2xl border border-brown/10 bg-white p-3.5 shadow-card">
       <header className="flex items-center gap-3">
         <Avatar name={author} size="md" />
         <div className="min-w-0 flex-1">
@@ -39,7 +49,7 @@ function NoteCard({ note, author, likes, comments, session, onToggleLike, onAddC
             likedByMe ? 'text-rose-dark' : 'text-brown-dark hover:text-rose'
           }`}
         >
-          <HeartIcon filled={likedByMe} className="h-5 w-5" />
+          <HeartIcon filled={likedByMe} className={`h-5 w-5 ${likedByMe ? 'oge-heart-pop' : ''}`} />
           {likes.length > 0 ? likes.length : 'Like'}
         </button>
         <button
@@ -60,7 +70,9 @@ function NoteCard({ note, author, likes, comments, session, onToggleLike, onAddC
         author={author}
         caption={note.body}
         createdAt={note.created_at}
+        commentLikes={commentLikes}
         session={session}
+        onToggleCommentLike={onToggleCommentLike}
         onAddComment={onAddComment}
         placeholder="Add a comment on this note…"
       />
@@ -77,8 +89,10 @@ export default function NotesFeed({
   emptyState,
   likes = [],
   comments = [],
+  commentLikes = [],
   onToggleLike,
   onAddComment,
+  onToggleCommentLike,
 }) {
   const [body, setBody] = useState('');
   const [sending, setSending] = useState(false);
@@ -136,9 +150,11 @@ export default function NotesFeed({
             author={resolvedGuestName(message.guests?.full_name)}
             likes={likes.filter((like) => like.message_id === message.id)}
             comments={comments.filter((comment) => comment.message_id === message.id)}
+            commentLikes={commentLikes}
             session={session}
             onToggleLike={() => onToggleLike?.(message.id)}
-            onAddComment={(body) => onAddComment?.(message.id, body)}
+            onAddComment={(body, parentId) => onAddComment?.(message.id, body, parentId)}
+            onToggleCommentLike={onToggleCommentLike}
           />
         ))
       )}

@@ -55,10 +55,22 @@ function VideoSlide({ item, active, label }) {
   );
 }
 
-function MediaPost({ post, author, likes, comments, session, onToggleLike, onAddComment, onDownload }) {
+function MediaPost({
+  post,
+  author,
+  likes,
+  comments,
+  commentLikes,
+  session,
+  onToggleLike,
+  onAddComment,
+  onToggleCommentLike,
+  onDownload,
+}) {
   const items = post.items;
   const [index, setIndex] = useState(0);
   const [commentsOpen, setCommentsOpen] = useState(false);
+  const [burst, setBurst] = useState(0);
   const [dragX, setDragX] = useState(0);
   const [dragging, setDragging] = useState(false);
   const dragRef = useRef(null);
@@ -115,6 +127,7 @@ function MediaPost({ post, author, likes, comments, session, onToggleLike, onAdd
   };
 
   const postLikes = likes.filter((like) => like.media_id === active.id);
+
   const likedByMe = Boolean(session && postLikes.some((like) => like.guest_id === session.guestId));
   const postComments = comments.filter((comment) => comment.media_id === active.id);
   const filterLabel =
@@ -122,8 +135,14 @@ function MediaPost({ post, author, likes, comments, session, onToggleLike, onAdd
       ? FILTER_LABELS[active.filter_name] || active.filter_name
       : null;
 
+  // The ring only fires when a like is added — un-liking stays quiet.
+  const like = () => {
+    if (!likedByMe) setBurst((count) => count + 1);
+    onToggleLike(active.id);
+  };
+
   return (
-    <article className="border-b border-brown/10 bg-white pb-3 sm:rounded-2xl sm:border sm:shadow-card">
+    <article className="oge-post-in border-b border-brown/10 bg-white pb-3 sm:rounded-2xl sm:border sm:shadow-card">
       <header className="flex items-center gap-3 px-3 py-2.5">
         <Avatar name={author} size="md" ring />
         <div className="min-w-0 flex-1">
@@ -236,12 +255,19 @@ function MediaPost({ post, author, likes, comments, session, onToggleLike, onAdd
         <div className="flex items-center gap-4">
           <button
             type="button"
-            onClick={() => onToggleLike(active.id)}
+            onClick={like}
             aria-pressed={likedByMe}
             aria-label={likedByMe ? 'Unlike' : 'Like'}
-            className={`transition ${likedByMe ? 'text-rose-dark' : 'text-brown-dark hover:text-rose'}`}
+            className={`relative transition ${likedByMe ? 'text-rose-dark' : 'text-brown-dark hover:text-rose'}`}
           >
-            <HeartIcon filled={likedByMe} className="h-6 w-6" />
+            <HeartIcon filled={likedByMe} className={`h-6 w-6 ${likedByMe ? 'oge-heart-pop' : ''}`} />
+            {burst > 0 && (
+              <span
+                key={burst}
+                aria-hidden="true"
+                className="oge-heart-burst absolute inset-0 rounded-full border border-rose"
+              />
+            )}
           </button>
           <button
             type="button"
@@ -288,7 +314,9 @@ function MediaPost({ post, author, likes, comments, session, onToggleLike, onAdd
         caption={post.caption}
         createdAt={active.created_at}
         session={session}
-        onAddComment={(body) => onAddComment(active.id, body)}
+        commentLikes={commentLikes}
+        onToggleCommentLike={onToggleCommentLike}
+        onAddComment={(body, parentId) => onAddComment(active.id, body, parentId)}
       />
     </article>
   );
@@ -303,9 +331,11 @@ export default function MediaFeed({
   guestNameById,
   likes,
   comments,
+  commentLikes = [],
   session,
   onToggleLike,
   onAddComment,
+  onToggleCommentLike,
   onDownload,
   emptyState,
 }) {
@@ -322,9 +352,11 @@ export default function MediaFeed({
           author={resolvedGuestName(guestNameById[post.guestId])}
           likes={likes}
           comments={comments}
+          commentLikes={commentLikes}
           session={session}
           onToggleLike={onToggleLike}
           onAddComment={onAddComment}
+          onToggleCommentLike={onToggleCommentLike}
           onDownload={onDownload}
         />
       ))}

@@ -50,7 +50,7 @@ export default function GuestRegister() {
   };
 
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center bg-cream px-5 py-10 text-center">
+    <div className="oge-page-in flex min-h-dvh flex-col items-center justify-center bg-cream px-5 py-10 text-center">
       <div aria-hidden className="pointer-events-none absolute left-6 top-8 text-2xl text-rose/40 sm:left-16">❦</div>
       <p className="text-[11px] uppercase tracking-[0.35em] text-brown/60">Our Guests' Eyes</p>
       <h1 className="mt-3 font-script text-5xl leading-tight text-rose">You're on the guest list</h1>

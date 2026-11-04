@@ -157,7 +157,7 @@ export default function Dashboard() {
   if (!weddings) return <Spinner label="Opening your events…" />;
 
   return (
-    <div className="min-h-dvh bg-cream">
+    <div className="oge-page-in min-h-dvh bg-cream">
       <nav className="sticky top-0 z-30 border-b border-brown/10 bg-cream/90 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
           <div>

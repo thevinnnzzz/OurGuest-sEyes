@@ -80,7 +80,7 @@ export default function MediaCard({
             aria-pressed={likedByMe}
             aria-label={likedByMe ? 'Unlike this moment' : 'Like this moment'}
           >
-            {likedByMe ? '♥' : '♡'} {likeCount ?? 0}
+            <span className={likedByMe ? 'oge-heart-pop inline-block' : 'inline-block'}>{likedByMe ? '♥' : '♡'}</span> {likeCount ?? 0}
           </button>
           <button
             type="button"

@@ -236,7 +236,7 @@ export default function GuestGallery() {
   );
 
   return (
-    <div className="min-h-dvh bg-cream pb-[calc(var(--oge-nav-h)+env(safe-area-inset-bottom))]">
+    <div className="oge-page-in min-h-dvh bg-cream pb-[calc(var(--oge-nav-h)+env(safe-area-inset-bottom))]">
       <GalleryHeader
         guestName={session?.fullName}
         coupleNames={names}
@@ -259,9 +259,11 @@ export default function GuestGallery() {
               guestNameById={guestNameById}
               likes={interactions.likes}
               comments={interactions.comments}
+              commentLikes={interactions.commentLikes}
               session={session}
               onToggleLike={interactions.toggleLike}
               onAddComment={interactions.addComment}
+              onToggleCommentLike={interactions.toggleCommentLike}
               onDownload={(item) => downloadUrl(item.url, item.url.split('/').pop())}
               emptyState={emptyPhotos}
             />
@@ -276,8 +278,10 @@ export default function GuestGallery() {
               session={session}
               likes={interactions.likes}
               comments={interactions.comments}
+              commentLikes={interactions.commentLikes}
               onToggleLike={interactions.toggleNoteLike}
               onAddComment={interactions.addNoteComment}
+              onToggleCommentLike={interactions.toggleCommentLike}
               emptyState={emptyNotes}
             />
           )}

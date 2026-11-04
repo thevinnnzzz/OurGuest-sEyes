@@ -3,7 +3,7 @@ import EventLookup from '../components/wedding/EventLookup.jsx';
 
 export default function Landing() {
   return (
-    <div className="min-h-dvh bg-cream">
+    <div className="oge-page-in min-h-dvh bg-cream">
       {/* Hero */}
       <header className="relative overflow-hidden px-5 py-20 text-center">
         <div aria-hidden className="pointer-events-none absolute -left-24 top-10 h-72 w-72 rounded-full bg-rose/10 blur-3xl" />

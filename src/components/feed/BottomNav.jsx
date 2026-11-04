@@ -29,9 +29,17 @@ export default function BottomNav({ active, onChange }) {
                 isActive ? 'text-brown-dark' : 'text-brown/45 hover:text-brown/70'
               }`}
             >
-              <Icon className={`h-6 w-6 ${isActive ? '[stroke-width:2.3]' : ''}`} />
+              <Icon
+                className={`h-6 w-6 transition-transform duration-300 ease-out ${
+                  isActive ? '[stroke-width:2.3] scale-110' : 'scale-100'
+                }`}
+              />
               <span className="text-[10px] font-medium tracking-wide">{label}</span>
-              <span className={`h-1 w-1 rounded-full ${isActive ? 'bg-brown-dark' : 'bg-transparent'}`} />
+              <span
+                className={`h-1 w-1 rounded-full bg-brown-dark transition-all duration-300 ease-out ${
+                  isActive ? 'scale-100 opacity-100' : 'scale-0 opacity-0'
+                }`}
+              />
             </button>
           );
         })}
