@@ -38,10 +38,15 @@ export async function deleteEvent(wedding) {
 
   if (!res.ok) {
     if (res.status === 401) throw new Error('Your session expired — sign in again.');
-    if (res.status === 404) throw new Error('This event was already deleted.');
-    if (res.status >= 500 && !payload) {
-      throw new Error('The event server is not reachable. Start it with "npm run dev:server" and try again.');
+    // A JSON body means our own route answered. Without one, a dev proxy or a
+    // missing Netlify function returned its own 404/405 page instead.
+    if (!payload) {
+      throw new Error(
+        `The delete service did not answer (HTTP ${res.status}). Run "npm run dev:server" locally, ` +
+          'or redeploy the site so the event-delete function ships.',
+      );
     }
+    if (res.status === 404) throw new Error('This event was already deleted.');
     throw new Error(payload?.message || `Could not delete this event (HTTP ${res.status}). Try again.`);
   }
 

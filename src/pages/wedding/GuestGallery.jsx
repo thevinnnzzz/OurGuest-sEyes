@@ -332,7 +332,7 @@ export default function GuestGallery() {
         onDownload={runDownload}
       />
 
-      <InstallApp raised />
+      <InstallApp />
     </div>
   );
 }
