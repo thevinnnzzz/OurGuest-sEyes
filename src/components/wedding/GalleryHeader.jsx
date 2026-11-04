@@ -14,6 +14,7 @@ export default function GalleryHeader({
   onShare,
   shareLabel = 'Share a moment',
   shareDisabled = false,
+  onOpenProfile,
 }) {
   const name = guestName?.trim() || 'Guest';
   const subtitle = [
@@ -25,17 +26,26 @@ export default function GalleryHeader({
 
   return (
     <header className="sticky top-0 z-20 flex h-[var(--oge-header-h)] items-center gap-3 border-b border-brown/10 bg-cream/95 px-3 backdrop-blur">
-      <Avatar name={name} size="md" ring />
+      {/* The identity block opens the guest's profile settings. */}
+      <button
+        type="button"
+        onClick={onOpenProfile}
+        disabled={!onOpenProfile}
+        aria-label={onOpenProfile ? 'Open your profile and account settings' : undefined}
+        className="flex min-w-0 flex-1 items-center gap-3 text-left disabled:cursor-default"
+      >
+        <Avatar name={name} size="md" ring />
 
-      <div className="min-w-0 flex-1">
-        <p
-          title={name}
-          className="truncate font-display text-[17px] font-semibold leading-tight text-brown-dark"
-        >
-          {name}
-        </p>
-        <p className="truncate text-[11px] text-brown/50">{subtitle}</p>
-      </div>
+        <span className="min-w-0 flex-1">
+          <span
+            title={name}
+            className="block truncate font-display text-[17px] font-semibold leading-tight text-brown-dark"
+          >
+            {name}
+          </span>
+          <span className="block truncate text-[11px] text-brown/50">{subtitle}</span>
+        </span>
+      </button>
 
       {onShare && (
         <button

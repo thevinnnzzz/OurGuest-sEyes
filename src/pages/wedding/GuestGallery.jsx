@@ -15,6 +15,7 @@ import MediaFeed from '../../components/feed/MediaFeed.jsx';
 import NotesFeed from '../../components/feed/NotesFeed.jsx';
 import GalleryHeader from '../../components/wedding/GalleryHeader.jsx';
 import DownloadModal from '../../components/wedding/DownloadModal.jsx';
+import ProfileSheet from '../../components/wedding/ProfileSheet.jsx';
 import { hasGuestPosted } from '../../lib/posting.js';
 import { buildGalleryZip, saveBlob } from '../../lib/downloads.js';
 
@@ -36,7 +37,7 @@ async function downloadUrl(url, filename) {
 export default function GuestGallery() {
   const { slug } = useParams();
   const navigate = useNavigate();
-  const { session, checkExistingSession } = useEvent();
+  const { session, checkExistingSession, clearSession } = useEvent();
   const [wedding, setWedding] = useState(null);
   const [guests, setGuests] = useState([]);
   const [media, setMedia] = useState([]);
@@ -48,6 +49,7 @@ export default function GuestGallery() {
   const [saveResult, setSaveResult] = useState(null);
   const [remaining, setRemaining] = useState({ photos: 0, videos: 0 });
   const [tab, setTab] = useState(DEFAULT_TAB);
+  const [profileOpen, setProfileOpen] = useState(false);
   const bootedRef = useRef(false);
 
   const deadlineRef = useMemo(
@@ -240,6 +242,7 @@ export default function GuestGallery() {
         coupleNames={names}
         statusText={isLive ? `Closes in ${countdown.days}d ${countdown.hours}h` : 'Gallery closed'}
         activeTabLabel={activeTabLabel}
+        onOpenProfile={session ? () => setProfileOpen(true) : undefined}
         onShare={isLive && session ? () => setUploadOpen(true) : undefined}
         shareLabel={shareLabel}
         shareDisabled={!isLive}
@@ -338,6 +341,20 @@ export default function GuestGallery() {
         result={saveResult}
         onDownload={runDownload}
       />
+
+      {session && (
+        <ProfileSheet
+          open={profileOpen}
+          onClose={() => setProfileOpen(false)}
+          session={session}
+          coupleNames={names}
+          onSignedOut={async () => {
+            setProfileOpen(false);
+            await clearSession();
+            navigate(`/w/${encodeURIComponent(slug)}/register`, { replace: true });
+          }}
+        />
+      )}
 
       <InstallApp />
     </div>

@@ -21,6 +21,8 @@ A wedding media-sharing platform: guests scan a QR code, check in, share photos/
    Also run `20261104_note_likes_comments.sql`, which lets guests like and
    comment on notes in the Notes tab (required for those reactions to save).
     `20261105_comment_replies_likes.sql` adds replies and comment hearts.
+    `20261106_guest_profile.sql` powers the guest profile sheet (passcode
+    change and sign out).
 
 2. **Supabase Auth** — in Dashboard → Authentication, create your owner account (email + password). Disable email confirmation for simplicity, or confirm manually.
 
