@@ -5,6 +5,7 @@ import { CommentIcon, HeartIcon, SendIcon } from './icons.jsx';
 import { filterCss } from '../../lib/constants.js';
 import { resolvedGuestName } from '../../lib/attribution.js';
 import { groupMediaIntoPosts } from '../../lib/mediaPosts.js';
+import Modal from '../ui/Modal.jsx';
 
 const FILTER_LABELS = {
   hd: 'HD',
@@ -14,7 +15,7 @@ const FILTER_LABELS = {
   classic: 'Classic',
 };
 
-function PostComments({ comments, session, onAddComment }) {
+function PostComments({ comments, session, onAddComment, onOpenAll }) {
   const visible = comments.slice(0, 2);
 
   const submit = async (event) => {
@@ -37,7 +38,15 @@ function PostComments({ comments, session, onAddComment }) {
             </li>
           ))}
           {comments.length > visible.length && (
-            <li className="text-[13px] text-brown/45">View all {comments.length} comments</li>
+            <li>
+              <button
+                type="button"
+                onClick={onOpenAll}
+                className="text-[13px] text-brown/45 transition hover:text-brown"
+              >
+                View all {comments.length} comments
+              </button>
+            </li>
           )}
         </ul>
       )}
@@ -59,6 +68,95 @@ function PostComments({ comments, session, onAddComment }) {
         <p className="text-[13px] text-brown/45">Check in to comment.</p>
       )}
     </>
+  );
+}
+
+/**
+ * Every comment on a post, Instagram-style: a scrollable thread with a comment
+ * box pinned to the bottom. Opened from the comment icon or the "View all" line.
+ */
+function CommentsSheet({ open, onClose, comments, author, caption, createdAt, session, onAddComment }) {
+  const [draft, setDraft] = useState('');
+  const [sending, setSending] = useState(false);
+
+  const submit = async (event) => {
+    event.preventDefault();
+    const body = draft.trim();
+    if (!body || sending) return;
+    setSending(true);
+    try {
+      await onAddComment(body);
+      setDraft('');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <Modal open={open} onClose={onClose} title="Comments">
+      <div className="flex items-center gap-2.5 border-b border-brown/10 pb-3">
+        <Avatar name={author} size="sm" />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[13px] font-semibold text-brown-dark">{author}</p>
+          <p className="text-[11px] text-brown/50">{dayjs(createdAt).format('D MMM, HH:mm')}</p>
+        </div>
+      </div>
+
+      {caption && (
+        <p className="mt-3 text-[13px] leading-snug text-ink">
+          <span className="font-semibold text-brown-dark">{author}</span> {caption}
+        </p>
+      )}
+
+      <ul className="mt-2 space-y-3 pr-1">
+        {comments.length === 0 ? (
+          <li className="py-8 text-center text-[13px] text-brown/45">
+            No comments yet — be the first to say something.
+          </li>
+        ) : (
+          comments.map((comment) => (
+            <li key={comment.id} className="flex gap-2.5">
+              <Avatar name={comment.guests?.full_name} size="sm" />
+              <div className="min-w-0 flex-1">
+                <p className="break-words text-[13px] leading-snug">
+                  <span className="font-semibold text-brown-dark">
+                    {comment.guests?.full_name || 'Guest'}
+                  </span>{' '}
+                  <span className="text-ink/80">{comment.body}</span>
+                </p>
+                <p className="mt-0.5 text-[11px] text-brown/40">
+                  {dayjs(comment.created_at).format('D MMM, HH:mm')}
+                </p>
+              </div>
+            </li>
+          ))
+        )}
+      </ul>
+
+      <div className="sticky bottom-0 -mx-6 -mb-6 mt-3 border-t border-brown/10 bg-cream px-6 py-3">
+        {session ? (
+          <form onSubmit={submit} className="flex items-center gap-2">
+            <input
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              className="min-w-0 flex-1 bg-transparent py-1.5 text-[13px] text-ink placeholder:text-brown/40 focus:outline-none"
+              placeholder="Add a comment…"
+              maxLength={300}
+              aria-label="Add a comment"
+            />
+            <button
+              type="submit"
+              disabled={!draft.trim() || sending}
+              className="shrink-0 text-[13px] font-semibold text-gold transition hover:text-brown disabled:opacity-40"
+            >
+              Post
+            </button>
+          </form>
+        ) : (
+          <p className="text-[13px] text-brown/45">Check in to comment.</p>
+        )}
+      </div>
+    </Modal>
   );
 }
 
@@ -104,6 +202,7 @@ function VideoSlide({ item, active, label }) {
 function MediaPost({ post, author, likes, comments, session, onToggleLike, onAddComment, onDownload }) {
   const items = post.items;
   const [index, setIndex] = useState(0);
+  const [commentsOpen, setCommentsOpen] = useState(false);
   const [dragX, setDragX] = useState(0);
   const [dragging, setDragging] = useState(false);
   const dragRef = useRef(null);
@@ -288,9 +387,17 @@ function MediaPost({ post, author, likes, comments, session, onToggleLike, onAdd
           >
             <HeartIcon filled={likedByMe} className="h-6 w-6" />
           </button>
-          <span className="text-brown-dark" aria-hidden="true">
+          <button
+            type="button"
+            onClick={() => setCommentsOpen(true)}
+            aria-label={`View all ${postComments.length} comments`}
+            className="flex items-center gap-1 text-brown-dark transition hover:text-gold"
+          >
             <CommentIcon className="h-6 w-6" />
-          </span>
+            {postComments.length > 0 && (
+              <span className="text-[11px] font-semibold">{postComments.length}</span>
+            )}
+          </button>
           <button
             type="button"
             onClick={() => onDownload(active)}
@@ -315,14 +422,24 @@ function MediaPost({ post, author, likes, comments, session, onToggleLike, onAdd
           <p className="text-[13px] italic text-brown/45">a moment through {author}’s eyes</p>
         )}
 
-        <p className="text-[11px] text-brown/45">Captured by: {author}</p>
-
         <PostComments
           comments={postComments}
           session={session}
           onAddComment={(body) => onAddComment(active.id, body)}
+          onOpenAll={() => setCommentsOpen(true)}
         />
       </div>
+
+      <CommentsSheet
+        open={commentsOpen}
+        onClose={() => setCommentsOpen(false)}
+        comments={postComments}
+        author={author}
+        caption={post.caption}
+        createdAt={active.created_at}
+        session={session}
+        onAddComment={(body) => onAddComment(active.id, body)}
+      />
     </article>
   );
 }
