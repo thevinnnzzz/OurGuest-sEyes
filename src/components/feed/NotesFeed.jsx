@@ -1,10 +1,15 @@
 import { useState } from 'react';
 import dayjs from 'dayjs';
 import Avatar from './Avatar.jsx';
+import { CommentIcon, HeartIcon } from './icons.jsx';
+import CommentsSheet from './CommentsSheet.jsx';
 import { resolvedGuestName } from '../../lib/attribution.js';
 
-function NoteCard({ note, author }) {
+function NoteCard({ note, author, likes, comments, session, onToggleLike, onAddComment }) {
   const [expanded, setExpanded] = useState(false);
+  const [commentsOpen, setCommentsOpen] = useState(false);
+
+  const likedByMe = Boolean(session && likes.some((like) => like.guest_id === session.guestId));
 
   return (
     <article className="rounded-2xl border border-brown/10 bg-white p-3.5 shadow-card">
@@ -23,11 +28,58 @@ function NoteCard({ note, author }) {
       >
         {note.body}
       </p>
+
+      <div className="mt-3 flex items-center gap-4 border-t border-brown/10 pt-2">
+        <button
+          type="button"
+          onClick={onToggleLike}
+          aria-pressed={likedByMe}
+          aria-label={likedByMe ? 'Unlike this note' : 'Like this note'}
+          className={`flex items-center gap-1.5 whitespace-nowrap text-[13px] transition ${
+            likedByMe ? 'text-rose-dark' : 'text-brown-dark hover:text-rose'
+          }`}
+        >
+          <HeartIcon filled={likedByMe} className="h-5 w-5" />
+          {likes.length > 0 ? likes.length : 'Like'}
+        </button>
+        <button
+          type="button"
+          onClick={() => setCommentsOpen(true)}
+          aria-label={`View all ${comments.length} comment${comments.length === 1 ? '' : 's'}`}
+          className="flex items-center gap-1.5 whitespace-nowrap text-[13px] text-brown-dark transition hover:text-gold"
+        >
+          <CommentIcon className="h-5 w-5" />
+          {comments.length > 0 ? comments.length : 'Comment'}
+        </button>
+      </div>
+
+      <CommentsSheet
+        open={commentsOpen}
+        onClose={() => setCommentsOpen(false)}
+        comments={comments}
+        author={author}
+        caption={note.body}
+        createdAt={note.created_at}
+        session={session}
+        onAddComment={onAddComment}
+        placeholder="Add a comment on this note…"
+      />
     </article>
   );
 }
 
-export default function NotesFeed({ messages, loading, canWrite, onSubmit, session, emptyState }) {
+export default function NotesFeed({
+  messages,
+  loading,
+  canWrite,
+  onSubmit,
+  session,
+  emptyState,
+  likes = [],
+  comments = [],
+  onToggleLike,
+  onAddComment,
+}) {
   const [body, setBody] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
@@ -82,6 +134,11 @@ export default function NotesFeed({ messages, loading, canWrite, onSubmit, sessi
             key={message.id}
             note={message}
             author={resolvedGuestName(message.guests?.full_name)}
+            likes={likes.filter((like) => like.message_id === message.id)}
+            comments={comments.filter((comment) => comment.message_id === message.id)}
+            session={session}
+            onToggleLike={() => onToggleLike?.(message.id)}
+            onAddComment={(body) => onAddComment?.(message.id, body)}
           />
         ))
       )}

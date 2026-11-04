@@ -56,35 +56,40 @@ export function useEventInteractions(weddingId, session) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [weddingId]);
 
-  const toggleLike = async (mediaId) => {
+  // A like belongs either to a photo/video (`media_id`) or to a guestbook note
+  // (`message_id`), so the target is passed as a one-key column map.
+  const toggleTargetLike = async (target) => {
     if (!session) return;
-    const existing = likes.find((l) => l.media_id === mediaId && l.guest_id === session.guestId);
+    const [column] = Object.keys(target);
+    const value = target[column];
+    const existing = likes.find((l) => l[column] === value && l.guest_id === session.guestId);
     if (existing) {
       setLikes((prev) => prev.filter((l) => l.id !== existing.id));
       await supabase.from('likes').delete().eq('id', existing.id);
     } else {
       // Show the like immediately; the realtime refresh reconciles the row id.
-      const optimisticId = `optimistic-${mediaId}-${session.guestId}`;
+      const optimisticId = `optimistic-${value}-${session.guestId}`;
       setLikes((prev) => [
         ...prev,
-        { id: optimisticId, media_id: mediaId, guest_id: session.guestId, wedding_id: weddingId },
+        { id: optimisticId, ...target, guest_id: session.guestId, wedding_id: weddingId },
       ]);
       const { error } = await supabase
         .from('likes')
-        .insert({ media_id: mediaId, guest_id: session.guestId, wedding_id: weddingId });
+        .insert({ ...target, guest_id: session.guestId, wedding_id: weddingId });
       if (error) setLikes((prev) => prev.filter((like) => like.id !== optimisticId));
       refresh();
     }
   };
 
-  const addComment = async (mediaId, body) => {
+  const addTargetComment = async (target, body) => {
     if (!session || !body.trim()) return;
-    await supabase.from('comments').insert({
-      media_id: mediaId,
+    const { error } = await supabase.from('comments').insert({
+      ...target,
       guest_id: session.guestId,
       wedding_id: weddingId,
       body: body.trim(),
     });
+    if (error) throw new Error(error.message || 'Your comment could not be posted.');
     refresh();
   };
 
@@ -92,7 +97,9 @@ export function useEventInteractions(weddingId, session) {
     likes,
     comments,
     loading,
-    toggleLike,
-    addComment,
+    toggleLike: (mediaId) => toggleTargetLike({ media_id: mediaId }),
+    addComment: (mediaId, body) => addTargetComment({ media_id: mediaId }, body),
+    toggleNoteLike: (messageId) => toggleTargetLike({ message_id: messageId }),
+    addNoteComment: (messageId, body) => addTargetComment({ message_id: messageId }, body),
   };
 }

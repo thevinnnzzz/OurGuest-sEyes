@@ -274,6 +274,10 @@ export default function GuestGallery() {
               canWrite={isLive && Boolean(session)}
               onSubmit={book.addMessage}
               session={session}
+              likes={interactions.likes}
+              comments={interactions.comments}
+              onToggleLike={interactions.toggleNoteLike}
+              onAddComment={interactions.addNoteComment}
               emptyState={emptyNotes}
             />
           )}

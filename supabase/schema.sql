@@ -113,6 +113,37 @@ create table if not exists public.messages (
 create index if not exists messages_wedding_idx on public.messages (wedding_id, created_at desc);
 
 -- ------------------------------------------------------------
+-- Notes can be liked and commented on too
+-- ------------------------------------------------------------
+-- A like or comment targets exactly one thing: a photo/video (`media_id`) or a
+-- guestbook note (`message_id`). Mirrors migrations/20261104_note_likes_comments.sql
+-- and runs after `messages` exists so the foreign key can be declared here.
+alter table public.likes    alter column media_id drop not null;
+alter table public.comments alter column media_id drop not null;
+
+alter table public.likes
+  add column if not exists message_id uuid references public.messages(id) on delete cascade;
+
+alter table public.comments
+  add column if not exists message_id uuid references public.messages(id) on delete cascade;
+
+alter table public.likes drop constraint if exists likes_single_target;
+alter table public.likes add constraint likes_single_target
+  check ((media_id is null) <> (message_id is null));
+
+alter table public.comments drop constraint if exists comments_single_target;
+alter table public.comments add constraint comments_single_target
+  check ((media_id is null) <> (message_id is null));
+
+create unique index if not exists likes_message_guest_idx
+  on public.likes (message_id, guest_id)
+  where message_id is not null;
+
+create index if not exists comments_message_idx
+  on public.comments (message_id, created_at)
+  where message_id is not null;
+
+-- ------------------------------------------------------------
 -- Partnership inquiries
 -- ------------------------------------------------------------
 create table if not exists public.inquiries (

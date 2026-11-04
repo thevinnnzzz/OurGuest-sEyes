@@ -18,6 +18,8 @@ A wedding media-sharing platform: guests scan a QR code, check in, share photos/
    `20261030_add_media_caption.sql` and `20261102_add_media_batch.sql`. Both are
    optional at runtime (uploads fall back when a column is missing), but the
    batch column is what keeps photos and videos shared together in one post.
+   Also run `20261104_note_likes_comments.sql`, which lets guests like and
+   comment on notes in the Notes tab (required for those reactions to save).
 
 2. **Supabase Auth** — in Dashboard → Authentication, create your owner account (email + password). Disable email confirmation for simplicity, or confirm manually.
 
