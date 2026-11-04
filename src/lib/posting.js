@@ -12,10 +12,3 @@ export function hasGuestPosted({ media = [], notes = [], guestId } = {}) {
   return media.some(mine) || notes.some(mine);
 }
 
-/**
- * The floating (+) button is only legal for a check-in guest who has posted
- * nothing yet and whose gallery is still open. Everything else renders nothing.
- */
-export function canShowFloatingUpload({ hasPosted, isLive, hasSession }) {
-  return Boolean(hasSession && isLive && !hasPosted);
-}

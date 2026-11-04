@@ -15,7 +15,7 @@ import MediaFeed from '../../components/feed/MediaFeed.jsx';
 import NotesFeed from '../../components/feed/NotesFeed.jsx';
 import GalleryHeader from '../../components/wedding/GalleryHeader.jsx';
 import DownloadModal from '../../components/wedding/DownloadModal.jsx';
-import { canShowFloatingUpload, hasGuestPosted } from '../../lib/posting.js';
+import { hasGuestPosted } from '../../lib/posting.js';
 import { buildGalleryZip, saveBlob } from '../../lib/downloads.js';
 
 async function downloadUrl(url, filename) {
@@ -48,7 +48,6 @@ export default function GuestGallery() {
   const [saveResult, setSaveResult] = useState(null);
   const [remaining, setRemaining] = useState({ photos: 0, videos: 0 });
   const [tab, setTab] = useState(DEFAULT_TAB);
-  const [justPosted, setJustPosted] = useState(false);
   const bootedRef = useRef(false);
 
   const deadlineRef = useMemo(
@@ -140,7 +139,6 @@ export default function GuestGallery() {
       .order('created_at', { ascending: false });
     setMedia(data || []);
     computeRemaining(wedding, data || [], session);
-    setJustPosted(true);
   };
 
   const openSaveAll = () => {
@@ -195,12 +193,14 @@ export default function GuestGallery() {
   const isLive = !countdown.expired;
   const activeTabLabel = TABS.find((entry) => entry.id === tab)?.label || 'Gallery';
 
-  // Strict gate for the floating (+) button: one post per guest, then it is gone.
-  // `justPosted` closes the window before the refetch lands, so the button cannot
-  // survive a successful upload even for one frame.
-  const hasPosted =
-    justPosted || hasGuestPosted({ media, notes: book.messages, guestId: session?.guestId });
-  const showUploadButton = canShowFloatingUpload({ hasPosted, isLive, hasSession: Boolean(session) });
+  // The (+) stays in the corner for the whole gallery: a guest can keep adding
+  // moments until their allowance is used up. The sheet itself enforces the
+  // per-guest photo/video limits, so opening it late just explains what is left.
+  const hasPosted = hasGuestPosted({ media, notes: book.messages, guestId: session?.guestId });
+  const limitsLeft = Math.max(0, remaining.photos) + Math.max(0, remaining.videos);
+  const shareLabel = limitsLeft > 0
+    ? `Add moments — ${remaining.photos} photo${remaining.photos === 1 ? '' : 's'} and ${remaining.videos} video${remaining.videos === 1 ? '' : 's'} left`
+    : 'Your photo and video limit is used up';
 
   // A new tab always opens at the top of its own content.
   const changeTab = (next) => {
@@ -216,15 +216,13 @@ export default function GuestGallery() {
         title="No moments yet"
         subtitle={
           hasPosted
-            ? 'You have already shared something — add more from your album in the Gallery tab.'
+            ? 'You have already shared something — tap + to add more whenever you like.'
             : 'Be the first to share a photo or a short video from today.'
         }
       >
-        {!hasPosted && (
-          <button type="button" className="oge-btn-primary mt-3" onClick={() => setUploadOpen(true)} disabled={!isLive}>
-            Share the first moment
-          </button>
-        )}
+        <button type="button" className="oge-btn-primary mt-3" onClick={() => setUploadOpen(true)} disabled={!isLive}>
+          {hasPosted ? 'Add another moment' : 'Share the first moment'}
+        </button>
       </EmptyState>
     </div>
   );
@@ -242,7 +240,8 @@ export default function GuestGallery() {
         coupleNames={names}
         statusText={isLive ? `Closes in ${countdown.days}d ${countdown.hours}h` : 'Gallery closed'}
         activeTabLabel={activeTabLabel}
-        onShare={showUploadButton ? () => setUploadOpen(true) : undefined}
+        onShare={isLive && session ? () => setUploadOpen(true) : undefined}
+        shareLabel={shareLabel}
         shareDisabled={!isLive}
       />
 

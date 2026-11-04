@@ -12,6 +12,7 @@ export default function GalleryHeader({
   statusText,
   activeTabLabel,
   onShare,
+  shareLabel = 'Share a moment',
   shareDisabled = false,
 }) {
   const name = guestName?.trim() || 'Guest';
@@ -41,7 +42,8 @@ export default function GalleryHeader({
           type="button"
           onClick={onShare}
           disabled={shareDisabled}
-          aria-label="Share a moment"
+          aria-label={shareLabel}
+          title={shareLabel}
           className="flex h-9 w-9 items-center justify-center rounded-xl border border-brown/20 bg-white text-brown transition hover:border-gold hover:text-gold disabled:opacity-40"
         >
           <PlusIcon className="h-5 w-5" />

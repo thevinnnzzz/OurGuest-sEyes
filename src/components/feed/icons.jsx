@@ -30,6 +30,16 @@ export function SendIcon({ className = 'h-6 w-6' }) {
   );
 }
 
+export function DownloadIcon({ className = 'h-6 w-6' }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden="true" {...stroke}>
+      <path d="M12 3.5v11" />
+      <path d="m7.5 10.5 4.5 4.5 4.5-4.5" />
+      <path d="M4.5 20.5h15" />
+    </svg>
+  );
+}
+
 export function BookmarkIcon({ className = 'h-6 w-6' }) {
   return (
     <svg viewBox="0 0 24 24" className={className} aria-hidden="true" {...stroke}>

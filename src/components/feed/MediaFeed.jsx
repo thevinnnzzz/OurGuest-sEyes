@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import dayjs from 'dayjs';
 import Avatar from './Avatar.jsx';
-import { CommentIcon, HeartIcon, SendIcon } from './icons.jsx';
+import { CommentIcon, DownloadIcon, HeartIcon } from './icons.jsx';
 import CommentsSheet from './CommentsSheet.jsx';
 import { filterCss } from '../../lib/constants.js';
 import { resolvedGuestName } from '../../lib/attribution.js';
@@ -286,7 +286,7 @@ function MediaPost({
             aria-label={`Download this ${active.type}`}
             className="ml-auto text-brown-dark transition hover:text-gold"
           >
-            <SendIcon className="h-6 w-6" />
+            <DownloadIcon className="h-6 w-6" />
           </button>
         </div>
 
